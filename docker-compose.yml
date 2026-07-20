@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: jarvis-att-postgres
+    environment:
+      POSTGRES_DB: jarvis_att
+      POSTGRES_USER: jarvis
+      POSTGRES_PASSWORD: jarvis
+    ports:
+      - "5432:5432"
+    volumes:
+      - jarvis-att-postgres:/var/lib/postgresql/data
+
+volumes:
+  jarvis-att-postgres:

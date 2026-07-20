@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: jarvis-attendance
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jarvis_att}}
+    username: ${DB_USER:jarvis}
+    password: ${DB_PASSWORD:jarvis}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  mail:
+    host: localhost
+    port: 1025
+
+server:
+  port: ${PORT:8080}
+
+jarvis:
+  crypto:
+    hmac-secret: ${JARVIS_HMAC_SECRET:dev-hmac-secret-change-before-prod-dev-hmac-secret}
+    aes-key: ${JARVIS_AES_KEY:dev-aes-key-32-bytes-change-now!!}
+  jwt:
+    secret: ${JARVIS_JWT_SECRET:dev-jwt-secret-change-before-prod-dev-jwt-secret}
+    ttl: PT24H

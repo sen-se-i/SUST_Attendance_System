@@ -1,0 +1,8 @@
+{
+  "appId": "com.jarvisatt.attendance",
+  "appName": "JARVIS-ATT",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}

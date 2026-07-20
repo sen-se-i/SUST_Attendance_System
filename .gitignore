@@ -1,0 +1,13 @@
+target/
+.idea/
+*.iml
+.DS_Store
+
+frontend/android/local.properties
+frontend/android/**/build/
+frontend/android/.gradle/
+frontend/android/captures/
+frontend/.env.mobile
+
+.claude/
+.agents/
