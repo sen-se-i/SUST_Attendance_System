@@ -47,6 +47,10 @@ public class SessionEngine {
         return Optional.ofNullable(states.get(sessionId)).map(state -> state.currentTick().get());
     }
 
+    public boolean isRunning(UUID sessionId) {
+        return states.containsKey(sessionId);
+    }
+
     public Optional<String> currentPayload(UUID sessionId) {
         return currentTick(sessionId).map(CurrentTick::qrPayload);
     }

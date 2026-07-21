@@ -27,7 +27,15 @@ public class SessionLifecycleService {
         var classEntity = classService.ownedClass(request.classId(), teacher);
         classSessionRepository.findFirstByClassEntityIdAndStatus(classEntity.getId(), ClassSessionStatus.ACTIVE)
                 .ifPresent(existing -> {
-                    throw new ApiException(HttpStatus.CONFLICT, "Class already has an active attendance session");
+                    // A session is only genuinely active if its tick timer is still
+                    // running in memory. If not (e.g. the process restarted), it is
+                    // orphaned — end it so the teacher can start a fresh one.
+                    if (sessionEngine.isRunning(existing.getId())) {
+                        throw new ApiException(HttpStatus.CONFLICT, "Class already has an active attendance session");
+                    }
+                    existing.setStatus(ClassSessionStatus.ENDED);
+                    existing.setEndedAt(OffsetDateTime.now());
+                    classSessionRepository.saveAndFlush(existing);
                 });
         int totalTicks = request.totalTicks() == null ? 4 : request.totalTicks();
         int intervalSeconds = request.intervalSeconds() == null ? 3 : request.intervalSeconds();

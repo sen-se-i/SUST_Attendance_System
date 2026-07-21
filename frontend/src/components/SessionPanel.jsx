@@ -1,41 +1,63 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play, Square } from "lucide-react";
-import { fetchQrBlob } from "../lib/api";
-import { useTickSocket } from "../lib/useTickSocket";
+import { api, fetchQrBlob } from "../lib/api";
+
+// Poll the backend for the current tick and QR image over plain HTTP. This does
+// not rely on the WebSocket, so the projector QR keeps refreshing as long as the
+// REST API is reachable.
+const POLL_INTERVAL_MS = 1000;
 
 export function SessionPanel({ session, onStart, onStop, busy }) {
   const [tick, setTick] = useState(null);
+  const [error, setError] = useState(null);
   const [qrUrl, setQrUrl] = useState(null);
   const qrUrlRef = useRef(null);
 
-  const handleTick = useCallback(async (message) => {
-    setTick(message);
-    try {
-      const blob = await fetchQrBlob(message.sessionId);
-      const nextUrl = URL.createObjectURL(blob);
-      if (qrUrlRef.current) URL.revokeObjectURL(qrUrlRef.current);
-      qrUrlRef.current = nextUrl;
-      setQrUrl(nextUrl);
-    } catch {
-      // transient fetch failure, next tick will retry
-    }
-  }, []);
-
-  useTickSocket(session?.sessionId, handleTick);
+  const sessionId = session?.sessionId;
 
   useEffect(() => {
+    if (!sessionId) {
+      setTick(null);
+      setError(null);
+      setQrUrl(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const current = await api(`/api/sessions/${sessionId}/current`);
+        if (cancelled) return;
+        setTick(current);
+        setError(null);
+
+        // Only fetch the QR image once a real tick is active.
+        if (current.tickIndex !== null && current.tickIndex !== undefined) {
+          const blob = await fetchQrBlob(sessionId);
+          if (cancelled) return;
+          const nextUrl = URL.createObjectURL(blob);
+          if (qrUrlRef.current) URL.revokeObjectURL(qrUrlRef.current);
+          qrUrlRef.current = nextUrl;
+          setQrUrl(nextUrl);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      }
+    }
+
+    poll();
+    const timer = setInterval(poll, POLL_INTERVAL_MS);
+
     return () => {
+      cancelled = true;
+      clearInterval(timer);
       if (qrUrlRef.current) URL.revokeObjectURL(qrUrlRef.current);
       qrUrlRef.current = null;
     };
-  }, [session?.sessionId]);
+  }, [sessionId]);
 
-  useEffect(() => {
-    if (!session) {
-      setTick(null);
-      setQrUrl(null);
-    }
-  }, [session]);
+  const hasTick = tick && tick.tickIndex !== null && tick.tickIndex !== undefined;
 
   return (
     <div className="panel glass-panel session-panel">
@@ -55,10 +77,14 @@ export function SessionPanel({ session, onStart, onStop, busy }) {
       {session && (
         <div className="qr-stage">
           <p className="tick-status">
-            {tick ? `Tick ${tick.tickIndex + 1} · expires ${new Date(tick.expiresAt).toLocaleTimeString()}` : "Waiting for first tick..."}
+            {error
+              ? error
+              : hasTick
+                ? `Tick ${tick.tickIndex + 1} · expires ${new Date(tick.expiresAt).toLocaleTimeString()}`
+                : "Waiting for first QR code…"}
           </p>
           {qrUrl && <img src={qrUrl} alt="Current attendance QR" className="qr-image" />}
-          {tick?.qrPayload && <code className="payload-preview">{tick.qrPayload}</code>}
+          {hasTick && tick.qrPayload && <code className="payload-preview">{tick.qrPayload}</code>}
         </div>
       )}
     </div>
