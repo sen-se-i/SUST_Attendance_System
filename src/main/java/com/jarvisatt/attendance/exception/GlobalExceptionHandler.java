@@ -1,13 +1,13 @@
 package com.jarvisatt.attendance.exception;
 
+import java.time.OffsetDateTime;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.time.OffsetDateTime;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -20,7 +20,7 @@ public class GlobalExceptionHandler {
     ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException ex) {
         return response(HttpStatus.BAD_REQUEST, "Invalid request");
     }
-
+    
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ErrorResponse> conflict(DataIntegrityViolationException ex) {
         return response(HttpStatus.CONFLICT, "Request conflicts with existing data");

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -38,7 +39,14 @@ public class SessionEngine {
         SessionRuntimeState state = new SessionRuntimeState();
         states.put(session.getId(), state);
         Runnable rotate = () -> rotate(session.getId());
-        ScheduledFuture<?> future = taskScheduler.scheduleAtFixedRate(rotate, Duration.ofSeconds(session.getTickIntervalSeconds()));
+        // Tick 0 is fired manually below, synchronously, inside the caller's still-open
+        // transaction so it can see the just-created session row. The scheduler's own
+        // first execution must NOT also fire at "now" — it runs on a separate thread with
+        // no transaction, so it would read the session before this transaction commits,
+        // see it as missing, and call stop(), wiping the state we just created. Delaying
+        // the first scheduled run by one full interval avoids that race entirely.
+        Duration interval = Duration.ofSeconds(session.getTickIntervalSeconds());
+        ScheduledFuture<?> future = taskScheduler.scheduleAtFixedRate(rotate, Instant.now().plus(interval), interval);
         state.future(future);
         rotate.run();
     }
