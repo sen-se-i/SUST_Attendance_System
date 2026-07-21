@@ -13,13 +13,31 @@ export function setToken(token) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+// The backend runs on a free host that sleeps when idle and can take up to a
+// minute to wake, so allow a generous timeout before giving up.
+const REQUEST_TIMEOUT_MS = 90000;
+
 export async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (!(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, signal: controller.signal });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new ApiError("The server took too long to respond. It may be waking up — please try again.");
+    }
+    throw new ApiError("Could not reach the server. Check your internet connection and try again.");
+  } finally {
+    clearTimeout(timeout);
+  }
+
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
     try {

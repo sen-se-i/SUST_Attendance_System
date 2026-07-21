@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { LogIn, UserPlus } from "lucide-react";
+import { LogIn, UserPlus, LoaderCircle } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 import { useToast } from "../lib/ToastContext";
 import { ApiError } from "../lib/api";
@@ -79,7 +79,13 @@ export default function AuthPage() {
           />
         </div>
         <button type="submit" className="btn btn-primary" disabled={busy}>
-          Login
+          {busy ? (
+            <>
+              <LoaderCircle size={16} className="spin" /> Signing in…
+            </>
+          ) : (
+            "Login"
+          )}
         </button>
       </form>
 
@@ -144,7 +150,13 @@ export default function AuthPage() {
           </div>
         )}
         <button type="submit" className="btn btn-primary" disabled={busy}>
-          Register
+          {busy ? (
+            <>
+              <LoaderCircle size={16} className="spin" /> Creating account…
+            </>
+          ) : (
+            "Register"
+          )}
         </button>
       </form>
     </div>
