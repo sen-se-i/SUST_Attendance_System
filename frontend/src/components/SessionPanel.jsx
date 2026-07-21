@@ -7,11 +7,12 @@ import { api, fetchQrBlob } from "../lib/api";
 // REST API is reachable.
 const POLL_INTERVAL_MS = 1000;
 
-export function SessionPanel({ session, onStart, onStop, busy }) {
+export function SessionPanel({ session, onStart, onStop, onEnded, busy }) {
   const [tick, setTick] = useState(null);
   const [error, setError] = useState(null);
   const [qrUrl, setQrUrl] = useState(null);
   const qrUrlRef = useRef(null);
+  const hasTickedRef = useRef(false);
 
   const sessionId = session?.sessionId;
 
@@ -20,6 +21,7 @@ export function SessionPanel({ session, onStart, onStop, busy }) {
       setTick(null);
       setError(null);
       setQrUrl(null);
+      hasTickedRef.current = false;
       return undefined;
     }
 
@@ -29,11 +31,21 @@ export function SessionPanel({ session, onStart, onStop, busy }) {
       try {
         const current = await api(`/api/sessions/${sessionId}/current`);
         if (cancelled) return;
+
+        const tickActive = current.tickIndex !== null && current.tickIndex !== undefined;
+        if (tickActive) {
+          hasTickedRef.current = true;
+        } else if (hasTickedRef.current) {
+          // The session was ticking and is now WAITING again — it ran out its
+          // ticks (or was stopped elsewhere) rather than never having started.
+          onEnded();
+          return;
+        }
+
         setTick(current);
         setError(null);
 
-        // Only fetch the QR image once a real tick is active.
-        if (current.tickIndex !== null && current.tickIndex !== undefined) {
+        if (tickActive) {
           const blob = await fetchQrBlob(sessionId);
           if (cancelled) return;
           const nextUrl = URL.createObjectURL(blob);
@@ -55,7 +67,7 @@ export function SessionPanel({ session, onStart, onStop, busy }) {
       if (qrUrlRef.current) URL.revokeObjectURL(qrUrlRef.current);
       qrUrlRef.current = null;
     };
-  }, [sessionId]);
+  }, [sessionId, onEnded]);
 
   const hasTick = tick && tick.tickIndex !== null && tick.tickIndex !== undefined;
 

@@ -115,6 +115,12 @@ export default function TeacherDashboard() {
     }
   }
 
+  const handleSessionEnded = useCallback(() => {
+    notify("Attendance session finished (all ticks used).", "success");
+    setSession(null);
+    if (selectedClass) loadAttendance(selectedClass.id);
+  }, [notify, selectedClass, loadAttendance]);
+
   return (
     <div className="workspace">
       <aside className="sidebar">
@@ -214,7 +220,13 @@ export default function TeacherDashboard() {
               </button>
             </form>
 
-            <SessionPanel session={session} onStart={startSession} onStop={stopSession} busy={busy} />
+            <SessionPanel
+              session={session}
+              onStart={startSession}
+              onStop={stopSession}
+              onEnded={handleSessionEnded}
+              busy={busy}
+            />
 
             <div className="panel glass-panel">
               <h3>Attendance</h3>
