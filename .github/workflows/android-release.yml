@@ -10,6 +10,9 @@ env:
   # Public backend the app talks to. Update this if the Render service URL changes.
   API_BASE_URL: https://jarvis-att.onrender.com
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
