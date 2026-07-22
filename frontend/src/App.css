@@ -157,6 +157,14 @@
   background: var(--primary-glow);
 }
 
+.joined-class-item {
+  cursor: default;
+}
+
+.joined-class-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;

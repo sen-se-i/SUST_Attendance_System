@@ -30,6 +30,12 @@ export function ScannerPanel({ onScanned }) {
   }, []);
 
   async function startScanner() {
+    // The container must be visible (non-zero size) BEFORE Html5Qrcode.start() runs,
+    // since it sizes the internal video/canvas from the container's current dimensions.
+    // Starting the camera while the region is still display:none (i.e. flipping
+    // `scanning` only after start() resolves) attaches the stream but never renders
+    // it - the camera indicator lights up while the preview stays blank.
+    setScanning(true);
     try {
       const instance = new Html5Qrcode(regionId);
       scannerRef.current = instance;
@@ -43,8 +49,8 @@ export function ScannerPanel({ onScanned }) {
         },
         () => {},
       );
-      setScanning(true);
     } catch (error) {
+      setScanning(false);
       notify(error?.message || "Camera unavailable. Paste the payload instead.", "danger");
       scannerRef.current = null;
     }

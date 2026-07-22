@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Users } from "lucide-react";
+import { Plus, RefreshCw, Users } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/ToastContext";
 import { AttendanceTable } from "../components/AttendanceTable";
@@ -12,6 +12,7 @@ export default function TeacherDashboard() {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [attendance, setAttendance] = useState([]);
+  const [roster, setRoster] = useState([]);
   const [session, setSession] = useState(null);
   const [classForm, setClassForm] = useState(initialClassForm);
   const [rosterText, setRosterText] = useState("");
@@ -36,6 +37,17 @@ export default function TeacherDashboard() {
     [notify],
   );
 
+  const loadRoster = useCallback(
+    async (classId) => {
+      try {
+        setRoster(await api(`/api/classes/${classId}/roster`));
+      } catch (error) {
+        notify(error instanceof ApiError ? error.message : "Failed to load roster", "danger");
+      }
+    },
+    [notify],
+  );
+
   useEffect(() => {
     loadClasses();
   }, [loadClasses]);
@@ -45,6 +57,7 @@ export default function TeacherDashboard() {
     setSession(null);
     setRosterText("");
     loadAttendance(item.id);
+    loadRoster(item.id);
   }
 
   async function handleCreateClass(event) {
@@ -78,6 +91,7 @@ export default function TeacherDashboard() {
       });
       notify(`Roster saved (${result.accepted} accepted).`, "success");
       setRosterText("");
+      await loadRoster(selectedClass.id);
     } catch (error) {
       notify(error instanceof ApiError ? error.message : "Failed to save roster", "danger");
     } finally {
@@ -227,6 +241,45 @@ export default function TeacherDashboard() {
               onEnded={handleSessionEnded}
               busy={busy}
             />
+
+            <div className="panel glass-panel">
+              <div className="toolbar">
+                <h3>Roster</h3>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => loadRoster(selectedClass.id)}
+                >
+                  <RefreshCw size={16} /> Refresh
+                </button>
+              </div>
+              {roster.length === 0 ? (
+                <p className="empty-state">No roster entries yet — add registration numbers above.</p>
+              ) : (
+                <div className="custom-table-container">
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>Registration No</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {roster.map((entry) => (
+                        <tr key={entry.registrationNo}>
+                          <td>{entry.registrationNo}</td>
+                          <td>
+                            <span className={`badge ${entry.joined ? "badge-success" : "badge-warning"}`}>
+                              {entry.joined ? "Joined" : "Not joined yet"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
             <div className="panel glass-panel">
               <h3>Attendance</h3>

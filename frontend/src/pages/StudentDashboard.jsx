@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { CircleCheckBig, School } from "lucide-react";
+import { CircleCheckBig, GraduationCap, School } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/ToastContext";
 import { useAuth } from "../lib/AuthContext";
@@ -16,6 +16,7 @@ export default function StudentDashboard() {
   const [qrPayload, setQrPayload] = useState("");
   const [deviceInstallId, setDeviceInstallId] = useState(getDeviceInstallId);
   const [attendance, setAttendance] = useState([]);
+  const [joinedClasses, setJoinedClasses] = useState([]);
   const [busy, setBusy] = useState(false);
 
   const loadAttendance = useCallback(async () => {
@@ -26,9 +27,18 @@ export default function StudentDashboard() {
     }
   }, [notify]);
 
+  const loadJoinedClasses = useCallback(async () => {
+    try {
+      setJoinedClasses(await api("/api/classes/enrolled"));
+    } catch (error) {
+      notify(error instanceof ApiError ? error.message : "Failed to load joined classes", "danger");
+    }
+  }, [notify]);
+
   useEffect(() => {
     loadAttendance();
-  }, [loadAttendance]);
+    loadJoinedClasses();
+  }, [loadAttendance, loadJoinedClasses]);
 
   async function handleJoin(event) {
     event.preventDefault();
@@ -36,6 +46,7 @@ export default function StudentDashboard() {
     try {
       await api("/api/classes/join", { method: "POST", body: JSON.stringify(joinForm) });
       notify("Class joined.", "success");
+      await loadJoinedClasses();
     } catch (error) {
       notify(error instanceof ApiError ? error.message : "Failed to join class", "danger");
     } finally {
@@ -98,6 +109,24 @@ export default function StudentDashboard() {
           Join
         </button>
       </form>
+
+      <div className="panel glass-panel">
+        <h2>
+          <GraduationCap size={18} /> Joined Classes
+        </h2>
+        {joinedClasses.length === 0 ? (
+          <p className="empty-state">You haven't joined any classes yet.</p>
+        ) : (
+          <div className="list">
+            {joinedClasses.map((item) => (
+              <div key={item.id} className="list-item joined-class-item">
+                {item.subjectCode} · {item.department}
+                <span className="subtitle"> — code {item.code}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="panel glass-panel scanner-panel">
         <ScannerPanel onScanned={setQrPayload} />
