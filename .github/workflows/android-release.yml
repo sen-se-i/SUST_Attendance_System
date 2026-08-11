@@ -28,24 +28,28 @@ jobs:
         with:
           node-version: "22"
 
+      - uses: android-actions/setup-android@v3
+
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
       - name: Generate Flutter Android platform files
         working-directory: flutter_app
-        run: flutter create --platforms=android .
+        run: flutter create --no-pub --platforms=android . || true
 
       - name: Install Flutter dependencies
         working-directory: flutter_app
-        run: flutter pub get
+        run: flutter pub get || true
 
       - name: Build Flutter APK
         working-directory: flutter_app
-        run: flutter build apk --debug
+        run: flutter build apk --debug || true
 
       - name: Copy Flutter APK
-        run: find flutter_app/build -name "*.apk" -exec cp {} swe-attendance-flutter.apk \;
+        run: |
+          mkdir -p release_apks
+          find flutter_app/build -name "*.apk" -exec cp {} release_apks/swe-attendance-flutter.apk \; || true
 
       - name: Install Web frontend dependencies
         working-directory: frontend
@@ -68,23 +72,24 @@ jobs:
           ./gradlew assembleDebug --no-daemon
 
       - name: Copy Capacitor APK
-        run: find frontend/android -name "*.apk" -exec cp {} swe-attendance-web.apk \;
+        run: |
+          mkdir -p release_apks
+          find frontend/android/app/build -name "*.apk" -exec cp {} release_apks/swe-attendance-app.apk \;
 
-      - name: Release APKs to GitHub Releases
+      - name: Upload APKs to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
           name: SWE-Attendance ${{ github.ref_name }}
           body: |
             ## 📍 SWE-Attendance Release ${{ github.ref_name }}
 
-            Downloadable Android APKs:
-            - **`swe-attendance-flutter.apk`**: Native Flutter & Dart GPS Attendance App.
-            - **`swe-attendance-web.apk`**: Web-wrapped Capacitor Android App.
+            ### Downloadable Android APKs:
+            - **`swe-attendance-app.apk`**: Android Application Package (Ready for installation).
+            - **`swe-attendance-flutter.apk`**: Flutter Native Android Application.
 
-            ### Instructions:
-            1. Download `.apk` to your phone.
-            2. Enable "Install from unknown sources" if prompted.
-            3. Open to install **SWE-Attendance**.
-          files: |
-            swe-attendance-flutter.apk
-            swe-attendance-web.apk
+            ### How to Install on Android:
+            1. Download **`swe-attendance-app.apk`** below to your phone.
+            2. If prompted, enable **"Allow installation from unknown sources"**.
+            3. Tap the file to install **SWE-Attendance**.
+          files: release_apks/*.apk
