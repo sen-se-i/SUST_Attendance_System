@@ -37,7 +37,7 @@ jobs:
         run: flutter build apk --debug
 
       - name: Copy Flutter APK
-        run: cp flutter_app/build/app/outputs/flutter-apk/app-debug.apk swe-attendance-flutter.apk
+        run: find flutter_app/build -name "*.apk" -exec cp {} swe-attendance-flutter.apk \;
 
       - name: Upload Flutter APK Artifact
         uses: actions/upload-artifact@v4
