@@ -8,7 +8,7 @@ export function Layout({ children }) {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <MapPin size={26} className="brand-icon" style={{ color: "#38bdf8" }} />
+          <img src="/logo.png" alt="SWE-Attendance Logo" style={{ width: 32, height: 32, objectFit: "contain" }} />
           <div>
             <h1>SWE-Attendance</h1>
             <p className="subtitle">
