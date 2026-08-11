@@ -13,40 +13,8 @@ permissions:
   contents: write
 
 jobs:
-  build-flutter:
-    name: Build Flutter APK
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Install Flutter dependencies
-        working-directory: flutter_app
-        run: flutter pub get
-
-      - name: Build Flutter APK
-        working-directory: flutter_app
-        run: flutter build apk --debug
-
-      - name: Copy Flutter APK
-        run: find flutter_app/build -name "*.apk" -exec cp {} swe-attendance-flutter.apk \;
-
-      - name: Upload Flutter APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: swe-attendance-flutter-apk
-          path: swe-attendance-flutter.apk
-
-  build-capacitor:
-    name: Build Capacitor Android APK
+  build-and-release:
+    name: Build & Upload APKs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,13 +28,30 @@ jobs:
         with:
           node-version: "22"
 
-      - uses: android-actions/setup-android@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
 
-      - name: Install frontend dependencies
+      - name: Generate Flutter Android platform files
+        working-directory: flutter_app
+        run: flutter create --platforms=android .
+
+      - name: Install Flutter dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Build Flutter APK
+        working-directory: flutter_app
+        run: flutter build apk --debug
+
+      - name: Copy Flutter APK
+        run: find flutter_app/build -name "*.apk" -exec cp {} swe-attendance-flutter.apk \;
+
+      - name: Install Web frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Build web assets for mobile
+      - name: Build Web assets for Capacitor
         working-directory: frontend
         env:
           VITE_API_BASE_URL: ${{ env.API_BASE_URL }}
@@ -76,39 +61,16 @@ jobs:
         working-directory: frontend
         run: npx cap sync android
 
-      - name: Build debug APK
+      - name: Build Capacitor APK
         working-directory: frontend/android
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon
 
       - name: Copy Capacitor APK
-        run: cp frontend/android/app/build/outputs/apk/debug/app-debug.apk swe-attendance-web.apk
+        run: find frontend/android -name "*.apk" -exec cp {} swe-attendance-web.apk \;
 
-      - name: Upload Capacitor APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: swe-attendance-web-apk
-          path: swe-attendance-web.apk
-
-  release:
-    name: Create GitHub Release with APKs
-    needs: [build-flutter, build-capacitor]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download Flutter APK Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: swe-attendance-flutter-apk
-
-      - name: Download Capacitor APK Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: swe-attendance-web-apk
-
-      - name: Create or Update GitHub Release
+      - name: Release APKs to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           name: SWE-Attendance ${{ github.ref_name }}
@@ -116,13 +78,13 @@ jobs:
             ## 📍 SWE-Attendance Release ${{ github.ref_name }}
 
             Downloadable Android APKs:
-            - **`swe-attendance-flutter.apk`**: Flutter & Dart native Android application.
-            - **`swe-attendance-web.apk`**: Web-wrapped Capacitor Android application.
+            - **`swe-attendance-flutter.apk`**: Native Flutter & Dart GPS Attendance App.
+            - **`swe-attendance-web.apk`**: Web-wrapped Capacitor Android App.
 
             ### Instructions:
-            1. Download the `.apk` file to your Android phone.
-            2. Enable "Install from unknown sources" in settings if prompted.
-            3. Open the downloaded APK to install **SWE-Attendance**.
+            1. Download `.apk` to your phone.
+            2. Enable "Install from unknown sources" if prompted.
+            3. Open to install **SWE-Attendance**.
           files: |
             swe-attendance-flutter.apk
             swe-attendance-web.apk
