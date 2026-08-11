@@ -33,7 +33,7 @@ public class AttendanceRecord {
     @JoinColumn(name = "student_id")
     private User student;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "scanned_tick_id")
     private QrTick scannedTick;
 
@@ -42,4 +42,16 @@ public class AttendanceRecord {
 
     @Column(name = "scanned_at", nullable = false)
     private OffsetDateTime scannedAt;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Column(name = "distance_meters")
+    private Double distanceMeters;
+
+    @Column(name = "verification_status")
+    private String verificationStatus = "VERIFIED";
 }

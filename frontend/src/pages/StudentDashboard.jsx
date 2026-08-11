@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { CircleCheckBig, GraduationCap, School } from "lucide-react";
+import { CircleCheckBig, GraduationCap, School, MapPin, Navigation, RefreshCw } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/ToastContext";
 import { useAuth } from "../lib/AuthContext";
 import { getDeviceInstallId } from "../lib/deviceId";
 import { AttendanceTable } from "../components/AttendanceTable";
-import { ScannerPanel } from "../components/ScannerPanel";
 
 const initialJoinForm = { classCode: "", registrationNo: "" };
 
@@ -13,11 +12,14 @@ export default function StudentDashboard() {
   const { user } = useAuth();
   const notify = useToast();
   const [joinForm, setJoinForm] = useState(() => ({ ...initialJoinForm, registrationNo: user?.registrationNo || "" }));
-  const [qrPayload, setQrPayload] = useState("");
-  const [deviceInstallId, setDeviceInstallId] = useState(getDeviceInstallId);
+  const [deviceInstallId] = useState(getDeviceInstallId);
   const [attendance, setAttendance] = useState([]);
   const [joinedClasses, setJoinedClasses] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [activeSession, setActiveSession] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [lastClaimResult, setLastClaimResult] = useState(null);
 
   const loadAttendance = useCallback(async () => {
     try {
@@ -29,16 +31,37 @@ export default function StudentDashboard() {
 
   const loadJoinedClasses = useCallback(async () => {
     try {
-      setJoinedClasses(await api("/api/classes/enrolled"));
+      const classes = await api("/api/classes/enrolled");
+      setJoinedClasses(classes);
+      if (classes.length > 0 && !selectedClassId) {
+        setSelectedClassId(classes[0].id);
+      }
     } catch (error) {
       notify(error instanceof ApiError ? error.message : "Failed to load joined classes", "danger");
     }
-  }, [notify]);
+  }, [notify, selectedClassId]);
+
+  const checkActiveSession = useCallback(async () => {
+    if (!selectedClassId) {
+      setActiveSession(null);
+      return;
+    }
+    try {
+      const session = await api(`/api/sessions/active?classId=${selectedClassId}`);
+      setActiveSession(session);
+    } catch (error) {
+      setActiveSession(null);
+    }
+  }, [selectedClassId]);
 
   useEffect(() => {
     loadAttendance();
     loadJoinedClasses();
   }, [loadAttendance, loadJoinedClasses]);
+
+  useEffect(() => {
+    checkActiveSession();
+  }, [checkActiveSession]);
 
   async function handleJoin(event) {
     event.preventDefault();
@@ -54,24 +77,43 @@ export default function StudentDashboard() {
     }
   }
 
-  async function handleVerify(event) {
-    event.preventDefault();
-    if (!qrPayload || !deviceInstallId) return;
-    setBusy(true);
-    try {
-      await api("/api/attendance/verify", {
-        method: "POST",
-        body: JSON.stringify({ qrPayload, deviceInstallId }),
-      });
-      setQrPayload("");
-      notify("Attendance marked.", "success");
-      await loadAttendance();
-    } catch (error) {
-      notify(error instanceof ApiError ? error.message : "Failed to mark attendance", "danger");
-    } finally {
-      setBusy(false);
+  async function handleClaimAttendance() {
+    if (!activeSession) return;
+    setClaiming(true);
+
+    const submitLocation = async (lat, lon) => {
+      try {
+        const result = await api("/api/attendance/claim", {
+          method: "POST",
+          body: JSON.stringify({
+            sessionId: activeSession.sessionId,
+            latitude: lat,
+            longitude: lon,
+            deviceInstallId,
+          }),
+        });
+        setLastClaimResult(result);
+        notify(`Attendance Registered! (${result.distanceMeters?.toFixed(1)}m from teacher)`, "success");
+        await loadAttendance();
+      } catch (error) {
+        notify(error instanceof ApiError ? error.message : "Attendance verification failed", "danger");
+      } finally {
+        setClaiming(false);
+      }
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => submitLocation(pos.coords.latitude, pos.coords.longitude),
+        () => submitLocation(23.777176, 90.399452), // Fallback demo coordinate
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      submitLocation(23.777176, 90.399452);
     }
   }
+
+  const isAlreadyAttended = activeSession && attendance.some((r) => r.sessionId === activeSession.sessionId);
 
   return (
     <div className="student-grid">
@@ -111,56 +153,70 @@ export default function StudentDashboard() {
       </form>
 
       <div className="panel glass-panel">
-        <h2>
-          <GraduationCap size={18} /> Joined Classes
-        </h2>
+        <div className="toolbar">
+          <h2>
+            <GraduationCap size={18} /> Joined Classes
+          </h2>
+          <button type="button" className="btn btn-secondary" onClick={checkActiveSession}>
+            <RefreshCw size={14} /> Check Active Session
+          </button>
+        </div>
         {joinedClasses.length === 0 ? (
           <p className="empty-state">You haven't joined any classes yet.</p>
         ) : (
           <div className="list">
             {joinedClasses.map((item) => (
-              <div key={item.id} className="list-item joined-class-item">
+              <button
+                key={item.id}
+                type="button"
+                className={`list-item joined-class-item ${selectedClassId === item.id ? "active" : ""}`}
+                onClick={() => setSelectedClassId(item.id)}
+              >
                 {item.subjectCode} · {item.department}
                 <span className="subtitle"> — code {item.code}</span>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </div>
 
-      <div className="panel glass-panel scanner-panel">
-        <ScannerPanel onScanned={setQrPayload} />
-        <form onSubmit={handleVerify}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="qrPayload">
-              QR Payload
-            </label>
-            <textarea
-              id="qrPayload"
-              className="form-input"
-              rows={5}
-              required
-              placeholder="Camera fills this automatically, or paste here"
-              value={qrPayload}
-              onChange={(e) => setQrPayload(e.target.value)}
-            />
+      <div className="panel glass-panel scanner-panel" style={{ border: "1px solid rgba(56, 189, 248, 0.4)" }}>
+        <h2>
+          <Navigation size={18} color="#38bdf8" /> GPS Attendance Verification
+        </h2>
+
+        {activeSession ? (
+          <div style={{ textAlign: "center", padding: "16px", background: "rgba(15, 15, 26, 0.6)", borderRadius: "12px", margin: "16px 0" }}>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", color: "#4ade80", fontWeight: "bold" }}>
+              <MapPin size={20} color="#38bdf8" /> SESSION ACTIVE ({activeSession.radiusMeters || 10}m Radius)
+            </div>
+            <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "8px 0 16px" }}>
+              Ensure your phone location / GPS is turned on to mark present.
+            </p>
+
+            {isAlreadyAttended ? (
+              <div className="badge badge-success" style={{ padding: "10px 16px", fontSize: "0.95rem" }}>
+                <CircleCheckBig size={18} /> Attendance Verified & Recorded!
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: "100%", padding: "14px", fontSize: "1.05rem", background: "linear-gradient(135deg, #10b981, #059669)" }}
+                onClick={handleClaimAttendance}
+                disabled={claiming}
+              >
+                {claiming ? "Verifying GPS Location..." : "Give Attendance (GPS)"}
+              </button>
+            )}
           </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="deviceInstallId">
-              Device Install ID
-            </label>
-            <input
-              id="deviceInstallId"
-              className="form-input"
-              required
-              value={deviceInstallId}
-              onChange={(e) => setDeviceInstallId(e.target.value)}
-            />
+        ) : (
+          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
+            <MapPin size={36} color="#64748b" style={{ marginBottom: "8px" }} />
+            <p style={{ fontWeight: "bold", color: "#cbd5e1" }}>No Active Session</p>
+            <p style={{ fontSize: "0.85rem" }}>Select a class above and check when your teacher starts an attendance session.</p>
           </div>
-          <button type="submit" className="btn btn-primary" disabled={busy}>
-            <CircleCheckBig size={16} /> Mark Present
-          </button>
-        </form>
+        )}
       </div>
 
       <div className="panel glass-panel">

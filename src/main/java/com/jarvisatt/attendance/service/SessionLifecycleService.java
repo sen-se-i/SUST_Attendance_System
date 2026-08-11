@@ -27,9 +27,6 @@ public class SessionLifecycleService {
         var classEntity = classService.ownedClass(request.classId(), teacher);
         classSessionRepository.findFirstByClassEntityIdAndStatus(classEntity.getId(), ClassSessionStatus.ACTIVE)
                 .ifPresent(existing -> {
-                    // A session is only genuinely active if its tick timer is still
-                    // running in memory. If not (e.g. the process restarted), it is
-                    // orphaned — end it so the teacher can start a fresh one.
                     if (sessionEngine.isRunning(existing.getId())) {
                         throw new ApiException(HttpStatus.CONFLICT, "Class already has an active attendance session");
                     }
@@ -37,17 +34,21 @@ public class SessionLifecycleService {
                     existing.setEndedAt(OffsetDateTime.now());
                     classSessionRepository.saveAndFlush(existing);
                 });
-        int totalTicks = request.totalTicks() == null ? 4 : request.totalTicks();
-        int intervalSeconds = request.intervalSeconds() == null ? 3 : request.intervalSeconds();
-        if (totalTicks < 1 || intervalSeconds < 1) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "totalTicks and intervalSeconds must be positive");
-        }
+
+        double radiusMeters = request.radiusMeters() != null ? request.radiusMeters() : 10.0;
+        double latitude = request.latitude() != null ? request.latitude() : 0.0;
+        double longitude = request.longitude() != null ? request.longitude() : 0.0;
+
         ClassSession session = new ClassSession();
         session.setClassEntity(classEntity);
         session.setStartedAt(OffsetDateTime.now());
         session.setStatus(ClassSessionStatus.ACTIVE);
-        session.setTotalTicks(totalTicks);
-        session.setTickIntervalSeconds(intervalSeconds);
+        session.setTotalTicks(150);
+        session.setTickIntervalSeconds(1);
+        session.setLatitude(latitude);
+        session.setLongitude(longitude);
+        session.setRadiusMeters(radiusMeters);
+
         classSessionRepository.saveAndFlush(session);
         sessionEngine.start(session);
         return response(session);
@@ -60,8 +61,29 @@ public class SessionLifecycleService {
         sessionEngine.stop(sessionId);
     }
 
-    private SessionResponse response(ClassSession session) {
-        return new SessionResponse(session.getId(), session.getClassEntity().getId(), session.getStatus().name(),
-                session.getTotalTicks(), session.getTickIntervalSeconds());
+    @Transactional(readOnly = true)
+    public SessionResponse activeSession(UUID classId) {
+        ClassSession session = classSessionRepository.findFirstByClassEntityIdAndStatus(classId, ClassSessionStatus.ACTIVE)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "No active session for this class"));
+        if (session.getStartedAt().plusSeconds(150).isBefore(OffsetDateTime.now())) {
+            sessionEngine.stop(session.getId());
+            throw new ApiException(HttpStatus.NOT_FOUND, "No active session for this class");
+        }
+        return response(session);
+    }
+
+    public SessionResponse response(ClassSession session) {
+        OffsetDateTime startedAt = session.getStartedAt();
+        OffsetDateTime expiresAt = startedAt.plusSeconds(150);
+        return new SessionResponse(
+                session.getId(),
+                session.getClassEntity().getId(),
+                session.getStatus().name(),
+                session.getLatitude(),
+                session.getLongitude(),
+                session.getRadiusMeters(),
+                startedAt,
+                expiresAt
+        );
     }
 }

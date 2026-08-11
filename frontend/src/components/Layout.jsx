@@ -1,4 +1,4 @@
-import { LogOut, ScanLine } from "lucide-react";
+import { LogOut, MapPin } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 
 export function Layout({ children }) {
@@ -8,11 +8,11 @@ export function Layout({ children }) {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <ScanLine size={26} className="brand-icon" />
+          <MapPin size={26} className="brand-icon" style={{ color: "#38bdf8" }} />
           <div>
-            <h1>JARVIS-ATT</h1>
+            <h1>SWE-Attendance</h1>
             <p className="subtitle">
-              {user ? `${user.role === "ADMIN" ? "Teacher" : "Student"} console` : "Rotating QR attendance"}
+              {user ? `${user.role === "ADMIN" ? "Teacher" : "Student"} console` : "GPS Location Geofence Attendance"}
             </p>
           </div>
         </div>

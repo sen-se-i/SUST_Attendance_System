@@ -1,102 +1,97 @@
-import { useEffect, useRef, useState } from "react";
-import { Play, Square } from "lucide-react";
-import { api, fetchQrBlob } from "../lib/api";
+import { useEffect, useState } from "react";
+import { Play, Square, MapPin, Timer, Radar } from "lucide-react";
 
-// Poll the backend for the current tick and QR image over plain HTTP. This does
-// not rely on the WebSocket, so the projector QR keeps refreshing as long as the
-// REST API is reachable.
-const POLL_INTERVAL_MS = 1000;
-
-export function SessionPanel({ session, onStart, onStop, onEnded, busy }) {
-  const [tick, setTick] = useState(null);
-  const [error, setError] = useState(null);
-  const [qrUrl, setQrUrl] = useState(null);
-  const qrUrlRef = useRef(null);
-  const hasTickedRef = useRef(false);
-
-  const sessionId = session?.sessionId;
+export function SessionPanel({ session, onStart, onStop, busy }) {
+  const [radius, setRadius] = useState(10);
+  const [remaining, setRemaining] = useState(150);
 
   useEffect(() => {
-    if (!sessionId) {
-      setTick(null);
-      setError(null);
-      setQrUrl(null);
-      hasTickedRef.current = false;
-      return undefined;
+    if (!session || !session.expiresAt) return;
+    const interval = setInterval(() => {
+      const diff = Math.max(0, Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000));
+      setRemaining(diff);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [session]);
+
+  const handleStartWithLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      onStart({ latitude: 23.777176, longitude: 90.399452, radiusMeters: radius });
+      return;
     }
-
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const current = await api(`/api/sessions/${sessionId}/current`);
-        if (cancelled) return;
-
-        const tickActive = current.tickIndex !== null && current.tickIndex !== undefined;
-        if (tickActive) {
-          hasTickedRef.current = true;
-        } else if (hasTickedRef.current) {
-          // The session was ticking and is now WAITING again — it ran out its
-          // ticks (or was stopped elsewhere) rather than never having started.
-          onEnded();
-          return;
-        }
-
-        setTick(current);
-        setError(null);
-
-        if (tickActive) {
-          const blob = await fetchQrBlob(sessionId);
-          if (cancelled) return;
-          const nextUrl = URL.createObjectURL(blob);
-          if (qrUrlRef.current) URL.revokeObjectURL(qrUrlRef.current);
-          qrUrlRef.current = nextUrl;
-          setQrUrl(nextUrl);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      }
-    }
-
-    poll();
-    const timer = setInterval(poll, POLL_INTERVAL_MS);
-
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-      if (qrUrlRef.current) URL.revokeObjectURL(qrUrlRef.current);
-      qrUrlRef.current = null;
-    };
-  }, [sessionId, onEnded]);
-
-  const hasTick = tick && tick.tickIndex !== null && tick.tickIndex !== undefined;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        onStart({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          radiusMeters: radius,
+        });
+      },
+      () => {
+        // Fallback demo location if user denies or emulator
+        onStart({ latitude: 23.777176, longitude: 90.399452, radiusMeters: radius });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   return (
-    <div className="panel glass-panel session-panel">
+    <div className="panel glass-panel session-panel" style={{ border: "1px solid rgba(99, 102, 241, 0.4)" }}>
       <div className="toolbar">
-        <h3>Live Session</h3>
+        <h3 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Radar size={20} color="#818cf8" /> GPS Attendance Geofence Session
+        </h3>
         {session ? (
           <button type="button" className="btn btn-danger" onClick={onStop} disabled={busy}>
-            <Square size={16} /> Stop
+            <Square size={16} /> End Session Now
           </button>
         ) : (
-          <button type="button" className="btn btn-primary" onClick={onStart} disabled={busy}>
-            <Play size={16} /> Start Attendance
+          <button type="button" className="btn btn-primary" onClick={handleStartWithLocation} disabled={busy}>
+            <Play size={16} /> Start GPS Session ({radius}m)
           </button>
         )}
       </div>
 
-      {session && (
-        <div className="qr-stage">
-          <p className="tick-status">
-            {error
-              ? error
-              : hasTick
-                ? `Tick ${tick.tickIndex + 1} · expires ${new Date(tick.expiresAt).toLocaleTimeString()}`
-                : "Waiting for first QR code…"}
+      {!session ? (
+        <div style={{ marginTop: "16px" }}>
+          <label className="form-label" style={{ fontWeight: "bold", color: "#e2e8f0" }}>
+            Select Geofence Radius: <span style={{ color: "#818cf8" }}>{radius} Meters</span>
+          </label>
+          <div style={{ display: "flex", gap: "8px", margin: "12px 0" }}>
+            {[5, 10, 20, 50, 100].map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`btn ${radius === r ? "btn-primary" : "btn-secondary"}`}
+                style={{ padding: "6px 16px", borderRadius: "20px" }}
+                onClick={() => setRadius(r)}
+              >
+                {r}m
+              </button>
+            ))}
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="100"
+            step="5"
+            value={radius}
+            onChange={(e) => setRadius(Number(e.target.value))}
+            style={{ width: "100%", accentColor: "#6366f1" }}
+          />
+        </div>
+      ) : (
+        <div className="qr-stage" style={{ textAlign: "center", padding: "20px", background: "rgba(15, 15, 26, 0.6)", borderRadius: "12px" }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", color: "#4ade80", fontSize: "1.1rem", fontWeight: "bold" }}>
+            <MapPin size={22} color="#38bdf8" /> GEOFENCE ACTIVE ({session.radiusMeters || radius}m Radius)
+          </div>
+          <div style={{ margin: "16px 0", color: "#ef4444", fontSize: "1.3rem", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", gap: "6px" }}>
+            <Timer size={22} /> {remaining}s remaining (150s limit)
+          </div>
+          <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+            Students inside the {session.radiusMeters || radius}m perimeter can now click "Give Attendance" on their device.
           </p>
-          {qrUrl && <img src={qrUrl} alt="Current attendance QR" className="qr-image" />}
-          {hasTick && tick.qrPayload && <code className="payload-preview">{tick.qrPayload}</code>}
         </div>
       )}
     </div>

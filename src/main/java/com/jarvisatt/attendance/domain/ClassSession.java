@@ -37,4 +37,13 @@ public class ClassSession {
 
     @Column(name = "tick_interval_seconds", nullable = false)
     private int tickIntervalSeconds;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Column(name = "radius_meters")
+    private Double radiusMeters = 10.0;
 }

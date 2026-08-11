@@ -14,8 +14,8 @@
     <groupId>com.jarvisatt</groupId>
     <artifactId>attendance</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>JARVIS-ATT Attendance Backend</name>
-    <description>Rotating QR attendance backend skeleton</description>
+    <name>SWE-Attendance Backend</name>
+    <description>GPS Location Geofencing Attendance Backend System</description>
 
     <properties>
         <java.version>21</java.version>

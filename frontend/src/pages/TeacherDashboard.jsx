@@ -99,15 +99,23 @@ export default function TeacherDashboard() {
     }
   }
 
-  async function startSession() {
+  async function startSession(params = {}) {
     if (!selectedClass) return;
     setBusy(true);
     try {
       const started = await api("/api/sessions/start", {
         method: "POST",
-        body: JSON.stringify({ classId: selectedClass.id, totalTicks: 40, intervalSeconds: 3 }),
+        body: JSON.stringify({
+          classId: selectedClass.id,
+          latitude: params.latitude || 23.777176,
+          longitude: params.longitude || 90.399452,
+          radiusMeters: params.radiusMeters || 10.0,
+          totalTicks: 150,
+          intervalSeconds: 1,
+        }),
       });
       setSession(started);
+      notify(`GPS Session started (${params.radiusMeters || 10}m radius)`, "success");
     } catch (error) {
       notify(error instanceof ApiError ? error.message : "Failed to start session", "danger");
     } finally {

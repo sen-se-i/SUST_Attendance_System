@@ -18,6 +18,12 @@ import java.util.UUID;
 public class AttendanceController {
     private final AttendanceService attendanceService;
 
+    @PostMapping("/claim")
+    @PreAuthorize("hasRole('STUDENT')")
+    VerifyScanResponse claim(@Valid @RequestBody ClaimAttendanceRequest request, @AuthenticationPrincipal UserPrincipal principal) {
+        return attendanceService.claim(request, principal);
+    }
+
     @PostMapping("/verify")
     @PreAuthorize("hasRole('STUDENT')")
     VerifyScanResponse verify(@Valid @RequestBody VerifyScanRequest request, @AuthenticationPrincipal UserPrincipal principal) {

@@ -40,12 +40,18 @@ public class SessionController {
         return Map.of("status", "ENDED");
     }
 
+    @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+    SessionResponse active(@RequestParam UUID classId) {
+        return sessionLifecycleService.activeSession(classId);
+    }
+
     @GetMapping("/{sessionId}/current")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     CurrentTickResponse current(@PathVariable UUID sessionId) {
         return sessionEngine.currentTick(sessionId)
-                .map(tick -> new CurrentTickResponse(sessionId, tick.tickIndex(), tick.qrPayload(), "ACTIVE", tick.expiresAt()))
-                .orElseGet(() -> new CurrentTickResponse(sessionId, null, null, "WAITING", OffsetDateTime.now()));
+                .map(tick -> new CurrentTickResponse(sessionId, tick.tickIndex(), tick.qrPayload(), "ACTIVE", tick.expiresAt(), null, null, null))
+                .orElseGet(() -> new CurrentTickResponse(sessionId, null, null, "WAITING", OffsetDateTime.now(), null, null, null));
     }
 
     @GetMapping(value = "/{sessionId}/qr.png", produces = MediaType.IMAGE_PNG_VALUE)
