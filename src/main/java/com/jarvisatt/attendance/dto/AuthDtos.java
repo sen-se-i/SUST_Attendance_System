@@ -12,5 +12,5 @@ public final class AuthDtos {
 
     public record RegisterRequest(@Email String email, @NotBlank String password, @NotNull Role role, String registrationNo) {}
     public record LoginRequest(@Email String email, @NotBlank String password) {}
-    public record AuthResponse(String token, UUID userId, Role role, String registrationNo) {}
+    public record AuthResponse(String token, UUID userId, String email, Role role, String registrationNo) {}
 }

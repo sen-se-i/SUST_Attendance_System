@@ -36,8 +36,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        final token = body['accessToken'] ?? '';
-        final userJson = body['user'] ?? {};
+        final token = body['token'] ?? body['accessToken'] ?? '';
+        final userJson = body['user'] ?? body;
         UserModel user = UserModel.fromJson(userJson, token);
         return ApiResponse(isSuccess: true, data: user);
       } else {
