@@ -5,6 +5,9 @@ import '../models/class_model.dart';
 import '../models/session_model.dart';
 import '../models/attendance_model.dart';
 
+import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
+
 class ApiResponse<T> {
   final bool isSuccess;
   final T? data;
@@ -14,7 +17,11 @@ class ApiResponse<T> {
 }
 
 class ApiService {
-  static String baseUrl = 'http://localhost:8080';
+  static String _customBaseUrl = 'https://jarvis-att.onrender.com';
+
+  static String get baseUrl => _customBaseUrl;
+
+  static set baseUrl(String url) => _customBaseUrl = url;
 
   static Map<String, String> _headers(String? token) {
     Map<String, String> headers = {

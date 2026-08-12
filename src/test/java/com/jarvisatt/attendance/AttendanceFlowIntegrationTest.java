@@ -61,10 +61,10 @@ class AttendanceFlowIntegrationTest {
         Fixture fixture = fixture("once");
         String payload = activePayload(fixture);
 
-        var response = attendanceService.verify(new VerifyScanRequest(payload, "device-once", null), fixture.student());
+        var response = attendanceService.verify(new VerifyScanRequest(payload, "device-once", null, null, null, null), fixture.student());
         assertThat(response.registrationNo()).isEqualTo("REG-once");
 
-        assertThatThrownBy(() -> attendanceService.verify(new VerifyScanRequest(payload, "device-once", null), fixture.student()))
+        assertThatThrownBy(() -> attendanceService.verify(new VerifyScanRequest(payload, "device-once", null, null, null, null), fixture.student()))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).status())
                 .isEqualTo(HttpStatus.CONFLICT);
@@ -85,7 +85,7 @@ class AttendanceFlowIntegrationTest {
                     ready.countDown();
                     start.await(2, TimeUnit.SECONDS);
                     try {
-                        attendanceService.verify(new VerifyScanRequest(payload, "device-race-" + i, null), fixture.student());
+                        attendanceService.verify(new VerifyScanRequest(payload, "device-race-" + i, null, null, null, null), fixture.student());
                         successes.incrementAndGet();
                     } catch (ApiException ignored) {
                     }
@@ -113,7 +113,7 @@ class AttendanceFlowIntegrationTest {
         var createdClass = classService.create(new CreateClassRequest("CSE", "2026", "CSE101"), teacher);
         rosterService.addRoster(createdClass.id(), new RosterRequest(List.of("REG-" + suffix)), teacher);
         enrollmentService.join(new JoinClassRequest(createdClass.code(), "REG-" + suffix), student);
-        var session = sessionLifecycleService.start(new StartSessionRequest(createdClass.id(), 2, 5), teacher);
+        var session = sessionLifecycleService.start(new StartSessionRequest(createdClass.id(), null, null, null, 2, 5), teacher);
         return new Fixture(student, session);
     }
 

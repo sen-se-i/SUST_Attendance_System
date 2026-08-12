@@ -33,7 +33,7 @@ export async function api(path, options = {}) {
     if (error.name === "AbortError") {
       throw new ApiError("The server took too long to respond. It may be waking up — please try again.");
     }
-    throw new ApiError("Could not reach the server. Check your internet connection and try again.");
+    throw new ApiError("Could not reach the server. Please ensure the backend is running at http://localhost:8080 and try again.");
   } finally {
     clearTimeout(timeout);
   }

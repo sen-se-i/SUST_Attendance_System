@@ -78,6 +78,24 @@ export default function AuthPage() {
             onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
           />
         </div>
+        <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+            onClick={() => setLoginForm({ email: "teacher@example.com", password: "password" })}
+          >
+            Teacher Demo
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+            onClick={() => setLoginForm({ email: "ch.wixard@student.sust.edu", password: "password" })}
+          >
+            Student Demo
+          </button>
+        </div>
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? (
             <>
