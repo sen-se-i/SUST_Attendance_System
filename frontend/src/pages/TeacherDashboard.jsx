@@ -103,12 +103,15 @@ export default function TeacherDashboard() {
     if (!selectedClass) return;
     setBusy(true);
     try {
+      if (!Number.isFinite(params.latitude) || !Number.isFinite(params.longitude)) {
+        throw new Error("Teacher GPS location is required to start an attendance session.");
+      }
       const started = await api("/api/sessions/start", {
         method: "POST",
         body: JSON.stringify({
           classId: selectedClass.id,
-          latitude: params.latitude || 23.777176,
-          longitude: params.longitude || 90.399452,
+          latitude: params.latitude,
+          longitude: params.longitude,
           radiusMeters: params.radiusMeters || 10.0,
           totalTicks: 150,
           intervalSeconds: 1,

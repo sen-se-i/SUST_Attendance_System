@@ -16,8 +16,7 @@ export function SessionPanel({ session, onStart, onStop, busy }) {
 
   const handleStartWithLocation = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
-      onStart({ latitude: 23.777176, longitude: 90.399452, radiusMeters: radius });
+      alert("Geolocation is not supported by this browser. Please use the mobile app or a GPS-capable browser.");
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -28,9 +27,9 @@ export function SessionPanel({ session, onStart, onStop, busy }) {
           radiusMeters: radius,
         });
       },
-      () => {
-        // Fallback demo location if user denies or emulator
-        onStart({ latitude: 23.777176, longitude: 90.399452, radiusMeters: radius });
+      (error) => {
+        const detail = error?.message ? ` ${error.message}` : "";
+        alert(`Could not capture teacher GPS location.${detail} Please enable location permission and try again.`);
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );

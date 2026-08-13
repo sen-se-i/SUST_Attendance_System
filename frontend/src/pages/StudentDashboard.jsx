@@ -105,11 +105,16 @@ export default function StudentDashboard() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => submitLocation(pos.coords.latitude, pos.coords.longitude),
-        () => submitLocation(23.777176, 90.399452), // Fallback demo coordinate
+        (error) => {
+          const detail = error?.message ? ` ${error.message}` : "";
+          notify(`Could not capture your GPS location.${detail} Please enable location permission and try again.`, "danger");
+          setClaiming(false);
+        },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
-      submitLocation(23.777176, 90.399452);
+      notify("Geolocation is not supported by this browser. Please use the mobile app or a GPS-capable browser.", "danger");
+      setClaiming(false);
     }
   }
 

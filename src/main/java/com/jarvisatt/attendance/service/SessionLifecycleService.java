@@ -36,8 +36,11 @@ public class SessionLifecycleService {
                 });
 
         double radiusMeters = request.radiusMeters() != null ? request.radiusMeters() : 10.0;
-        double latitude = request.latitude() != null ? request.latitude() : 0.0;
-        double longitude = request.longitude() != null ? request.longitude() : 0.0;
+        double latitude = requireValidLatitude(request.latitude(), "Teacher latitude");
+        double longitude = requireValidLongitude(request.longitude(), "Teacher longitude");
+        if (radiusMeters <= 0 || radiusMeters > 500) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Radius must be between 1 and 500 meters");
+        }
 
         ClassSession session = new ClassSession();
         session.setClassEntity(classEntity);
@@ -85,5 +88,19 @@ public class SessionLifecycleService {
                 startedAt,
                 expiresAt
         );
+    }
+
+    private static double requireValidLatitude(Double latitude, String label) {
+        if (latitude == null || !Double.isFinite(latitude) || latitude < -90.0 || latitude > 90.0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between -90 and 90");
+        }
+        return latitude;
+    }
+
+    private static double requireValidLongitude(Double longitude, String label) {
+        if (longitude == null || !Double.isFinite(longitude) || longitude < -180.0 || longitude > 180.0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between -180 and 180");
+        }
+        return longitude;
     }
 }

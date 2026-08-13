@@ -71,10 +71,10 @@ public class AttendanceService {
             throw new ApiException(HttpStatus.CONFLICT, "Attendance already registered for this session");
         }
 
-        double teacherLat = session.getLatitude() != null ? session.getLatitude() : 0.0;
-        double teacherLon = session.getLongitude() != null ? session.getLongitude() : 0.0;
-        double studentLat = request.latitude();
-        double studentLon = request.longitude();
+        double teacherLat = requireValidLatitude(session.getLatitude(), "Session latitude");
+        double teacherLon = requireValidLongitude(session.getLongitude(), "Session longitude");
+        double studentLat = requireValidLatitude(request.latitude(), "Student latitude");
+        double studentLon = requireValidLongitude(request.longitude(), "Student longitude");
         double maxRadius = session.getRadiusMeters() != null ? session.getRadiusMeters() : 10.0;
 
         double distanceMeters = calculateHaversineDistance(teacherLat, teacherLon, studentLat, studentLon);
@@ -135,11 +135,24 @@ public class AttendanceService {
         if (!rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Not enrolled in this class roster");
         }
-        if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
+        if (!enrollmentRepository.existsByClassEntityIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class");
         }
         if (attendanceRecordRepository.existsBySessionIdAndRegistrationNo(session.getId(), registrationNo)) {
             throw new ApiException(HttpStatus.CONFLICT, "Already marked present");
+        }
+
+        double teacherLat = requireValidLatitude(session.getLatitude(), "Session latitude");
+        double teacherLon = requireValidLongitude(session.getLongitude(), "Session longitude");
+        double studentLat = requireValidLatitude(request.latitude(), "Student latitude");
+        double studentLon = requireValidLongitude(request.longitude(), "Student longitude");
+        double maxRadius = session.getRadiusMeters() != null ? session.getRadiusMeters() : 10.0;
+
+        double distanceMeters = calculateHaversineDistance(teacherLat, teacherLon, studentLat, studentLon);
+
+        if (distanceMeters > maxRadius) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    String.format("Location out of range! Distance from classroom: %.1fm (Allowed radius: %.1fm). Please move closer.", distanceMeters, maxRadius));
         }
 
         AttendanceRecord record = new AttendanceRecord();
@@ -148,10 +161,12 @@ public class AttendanceService {
         record.setRegistrationNo(registrationNo);
         record.setStudent(student);
         record.setScannedTick(tick);
+        record.setLatitude(studentLat);
+        record.setLongitude(studentLon);
+        record.setDistanceMeters(distanceMeters);
+        record.setVerificationStatus("VERIFIED");
         record.setDeviceInstallId(request.deviceInstallId());
         record.setScannedAt(OffsetDateTime.now());
-        record.setDistanceMeters(0.0);
-        record.setVerificationStatus("VERIFIED");
         try {
             attendanceRecordRepository.saveAndFlush(record);
         } catch (DataIntegrityViolationException ex) {
@@ -159,7 +174,7 @@ public class AttendanceService {
         }
         upsertDevice(student, request.deviceInstallId());
         eventPublisher.publishEvent(new AttendanceConfirmedEvent(record.getId()));
-        return new VerifyScanResponse(record.getId(), session.getId(), registrationNo, 0.0, "VERIFIED", record.getScannedAt());
+        return new VerifyScanResponse(record.getId(), session.getId(), registrationNo, distanceMeters, "VERIFIED", record.getScannedAt());
     }
 
     public static double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -171,6 +186,20 @@ public class AttendanceService {
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return EARTH_RADIUS_METERS * c;
+    }
+
+    private static double requireValidLatitude(Double latitude, String label) {
+        if (latitude == null || !Double.isFinite(latitude) || latitude < -90.0 || latitude > 90.0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between -90 and 90");
+        }
+        return latitude;
+    }
+
+    private static double requireValidLongitude(Double longitude, String label) {
+        if (longitude == null || !Double.isFinite(longitude) || longitude < -180.0 || longitude > 180.0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between -180 and 180");
+        }
+        return longitude;
     }
 
     @Transactional(readOnly = true)

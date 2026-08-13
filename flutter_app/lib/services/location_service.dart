@@ -53,11 +53,10 @@ class LocationService {
         longitude: position.longitude,
       );
     } catch (e) {
-      // Fallback for desktop/emulator or geolocation fallback
       return LocationResult(
-        latitude: 23.777176, // Default demo coordinate
-        longitude: 90.399452,
-        error: null,
+        latitude: 0,
+        longitude: 0,
+        error: 'Could not read your current GPS location. Please keep location enabled and try again outdoors or near a window.',
       );
     }
   }
