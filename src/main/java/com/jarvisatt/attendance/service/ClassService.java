@@ -76,23 +76,30 @@ public class ClassService {
     }
 
     private String uniqueCode(String subjectCode, String academicSession) {
-        String baseCode = (subjectCode != null ? subjectCode.replaceAll("[^A-Za-z0-9]", "") : "CLASS") +
-                          (academicSession != null ? academicSession.replaceAll("[^0-9]", "") : "");
-        if (baseCode.length() > 6) {
-            baseCode = baseCode.substring(0, 6);
+        if (subjectCode == null || subjectCode.isBlank()) {
+            return "CLASS" + (System.currentTimeMillis() % 10000);
         }
-        String code = baseCode.toUpperCase();
-        if (code.isBlank() || classRepository.existsByCode(code)) {
-            int counter = 1;
-            do {
-                code = (baseCode + counter).toUpperCase();
-                if (code.length() > 6) {
-                    code = code.substring(0, 6);
-                }
-                counter++;
-            } while (classRepository.existsByCode(code));
+        String cleanSubject = subjectCode.trim();
+        if (cleanSubject.length() > 25) {
+            cleanSubject = cleanSubject.substring(0, 25);
         }
-        return code;
+        if (!classRepository.existsByCode(cleanSubject)) {
+            return cleanSubject;
+        }
+        String cleanAlpha = cleanSubject.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        if (cleanAlpha.length() > 25) {
+            cleanAlpha = cleanAlpha.substring(0, 25);
+        }
+        if (!classRepository.existsByCode(cleanAlpha)) {
+            return cleanAlpha;
+        }
+        int counter = 1;
+        String candidate;
+        do {
+            candidate = cleanAlpha + counter;
+            counter++;
+        } while (classRepository.existsByCode(candidate));
+        return candidate;
     }
 
     private final com.jarvisatt.attendance.repository.ClassSessionRepository classSessionRepository;

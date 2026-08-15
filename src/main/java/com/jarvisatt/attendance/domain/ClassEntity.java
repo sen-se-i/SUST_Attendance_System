@@ -18,7 +18,7 @@ public class ClassEntity {
     @GeneratedValue
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 6)
+    @Column(nullable = false, unique = true, length = 30)
     private String code;
 
     @Column(nullable = false)

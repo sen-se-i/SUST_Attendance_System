@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -28,14 +29,30 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Initializing demo seed data...");
 
         // 1. Seed Teacher
-        User teacher = userRepository.findByEmail("teacher@example.com")
+        User teacher = userRepository.findByEmail("faria24mahmood@gmail.com")
+                .orElseGet(() -> userRepository.findByEmail("teacher@example.com")
                 .orElseGet(() -> {
                     User u = new User();
-                    u.setEmail("teacher@example.com");
-                    u.setPasswordHash(passwordEncoder.encode("password"));
+                    u.setEmail("faria24mahmood@gmail.com");
+                    u.setPasswordHash(passwordEncoder.encode("123456"));
                     u.setRole(Role.ADMIN);
                     return userRepository.save(u);
-                });
+                }));
+
+        // Always ensure faria24mahmood@gmail.com exists
+        userRepository.findByEmail("faria24mahmood@gmail.com").ifPresentOrElse(
+            u -> {
+                u.setPasswordHash(passwordEncoder.encode("123456"));
+                userRepository.save(u);
+            },
+            () -> {
+                User u = new User();
+                u.setEmail("faria24mahmood@gmail.com");
+                u.setPasswordHash(passwordEncoder.encode("123456"));
+                u.setRole(Role.ADMIN);
+                userRepository.save(u);
+            }
+        );
 
         // 2. Seed Student (ch.wixard@student.sust.edu)
         User student = userRepository.findByEmail("ch.wixard@student.sust.edu")
@@ -54,10 +71,12 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(student);
         }
 
-        // 3. Seed Demo Class if teacher has no classes
         List<ClassEntity> teacherClasses = classRepository.findByTeacherId(teacher.getId());
+        Optional<ClassEntity> existingSwe301 = classRepository.findByCode("SWE301");
         ClassEntity demoClass;
-        if (teacherClasses.isEmpty()) {
+        if (existingSwe301.isPresent()) {
+            demoClass = existingSwe301.get();
+        } else if (teacherClasses.isEmpty()) {
             demoClass = new ClassEntity();
             demoClass.setCode("SWE301");
             demoClass.setDepartment("Software Engineering");
