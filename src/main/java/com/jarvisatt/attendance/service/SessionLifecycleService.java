@@ -157,8 +157,8 @@ public class SessionLifecycleService {
 
     private static void requireFreshCapture(OffsetDateTime capturedAt, String label) {
         OffsetDateTime now = OffsetDateTime.now();
-        if (capturedAt == null || capturedAt.isBefore(now.minusSeconds(15)) || capturedAt.isAfter(now.plusSeconds(30))) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, label + " must be freshly captured within the last 15 seconds");
+        if (capturedAt == null || capturedAt.isBefore(now.minusSeconds(60)) || capturedAt.isAfter(now.plusSeconds(60))) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " must be freshly captured within the last 60 seconds");
         }
     }
 

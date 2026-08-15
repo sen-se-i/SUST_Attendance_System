@@ -3,32 +3,24 @@ const MAX_ACCEPTED_ACCURACY_METERS = 40;
 // Absolute minimum accuracy we ever request (for very small geofences).
 const MIN_TARGET_ACCURACY_METERS = 3;
 
-function getPosition(timeout = 8000) {
+function getPosition(timeout = 5000, maximumAge = 2000) {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(resolve, reject, {
       enableHighAccuracy: true,
-      maximumAge: 0,
+      maximumAge,
       timeout,
     });
   });
 }
 
 /**
- * Captures the best GPS fix achievable within the given session radius.
+ * Captures high-precision GPS coordinates quickly within 1-2 seconds.
  *
  * Strategy:
- *  - Ideal target:  accuracy = radius / 2  — retries until this is achieved or
- *                   8 attempts are exhausted, keeping the best reading each time.
- *  - Hard reject:   accuracy > min(40m, radius × 2) — GPS is so bad the reported
- *                   center can't be trusted; mirrors the backend quality gate.
- *  - Otherwise:     submit to backend. The backend's "center-inside" check
- *                   (distance <= radius) makes the final call.
- *
- * This allows students at the back of the room (near the boundary) to pass as
- * long as their GPS center is inside the zone, regardless of accuracy margin.
- *
- * Retries up to 8 times with 1 second between attempts so the device
- * has plenty of time to converge to a tighter fix.
+ *  - Rapid sampling (up to 5 attempts with 200ms delay between attempts).
+ *  - Early exit as soon as a strong fix is acquired (<= ideal target or <= 20m).
+ *  - Hard reject only if GPS noise is too high (> min(40m, radius * 2)).
+ *  - Generates a fresh timestamp at submission time so no expiration happens.
  */
 export async function captureCalibratedLocation(radiusMeters = 20) {
   if (!navigator.geolocation) {
@@ -37,25 +29,25 @@ export async function captureCalibratedLocation(radiusMeters = 20) {
 
   const radius = Math.max(5, Number(radiusMeters) || 20);
 
-  // Ideal target: half the radius — gives room for the backend's center-inside check.
+  // Ideal target: half radius or at most 15m
   const idealAccuracyMeters = Math.min(
     MAX_ACCEPTED_ACCURACY_METERS,
-    Math.max(MIN_TARGET_ACCURACY_METERS, radius / 2),
+    Math.max(MIN_TARGET_ACCURACY_METERS, Math.min(15, radius / 2)),
   );
 
-  // Hard limit: mirrors backend quality gate — min(40m, radius * 2).
-  // GPS worse than this is so unreliable the center can't be trusted at all.
   const hardLimitMeters = Math.min(MAX_ACCEPTED_ACCURACY_METERS, radius * 2);
 
   let best = null;
 
-  for (let attempt = 0; attempt < 8; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     let position;
     try {
-      position = await getPosition();
+      position = await getPosition(4000, attempt === 0 ? 2000 : 0);
     } catch {
-      if (attempt === 7) throw new Error("GPS signal lost. Please enable location permission and try again.");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (attempt === 4 && !best) {
+        throw new Error("GPS signal lost. Please ensure location permission is enabled and try again.");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
       continue;
     }
 
@@ -63,15 +55,21 @@ export async function captureCalibratedLocation(radiusMeters = 20) {
       best = position;
     }
 
-    // Early exit if we hit the ideal target
+    // Early exit if we hit our target accuracy
     if (best.coords.accuracy <= idealAccuracyMeters) {
       break;
     }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Early exit if accuracy is solid after a couple attempts
+    if (attempt >= 2 && best.coords.accuracy <= Math.min(25, radius)) {
+      break;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
   if (!best) {
-    throw new Error("No GPS fix returned.");
+    throw new Error("No GPS fix returned. Please ensure location is enabled.");
   }
 
   const accuracyMeters = best.coords.accuracy;
@@ -79,21 +77,19 @@ export async function captureCalibratedLocation(radiusMeters = 20) {
     throw new Error("GPS did not report usable accuracy. Please try again.");
   }
 
-  // Hard reject: accuracy > min(40m, radius*2) — backend quality gate.
-  // If GPS is this bad the center position can't be trusted at all.
+  // Hard reject if GPS is excessively noisy
   if (accuracyMeters > hardLimitMeters) {
     throw new Error(
-      `GPS accuracy is ${accuracyMeters.toFixed(1)}m — too weak for this ${radius}m session. ` +
-      `Enable High Accuracy mode (Wi-Fi + Mobile Data ON) and stand still, then retry.`,
+      `GPS accuracy is ±${accuracyMeters.toFixed(1)}m — too weak for this ${radius}m session. ` +
+      `Enable High Accuracy GPS mode and stand still, then retry.`,
     );
   }
 
-  // Accuracy passed the quality gate — submit and let the backend's center-inside
-  // check (distance <= radius) make the final call.
   return {
     latitude: best.coords.latitude,
     longitude: best.coords.longitude,
     accuracyMeters,
-    capturedAt: new Date(best.timestamp || Date.now()).toISOString(),
+    capturedAt: new Date().toISOString(), // Always freshly generated timestamp
   };
 }
+
