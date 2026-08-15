@@ -40,4 +40,16 @@ public class EnrollmentService {
         enrollmentRepository.save(enrollment);
         return new JoinClassResponse(enrollment.getId(), classEntity.getId(), enrollment.getStatus().name());
     }
+
+    public java.util.List<EnrolledStudentResponse> getEnrolledStudents(java.util.UUID classId) {
+        return enrollmentRepository.findByClassEntityIdAndStatus(classId, EnrollmentStatus.ACTIVE)
+                .stream()
+                .map(e -> new EnrolledStudentResponse(
+                        e.getStudent().getRegistrationNo(),
+                        e.getStudent().getName(),
+                        e.getStatus().name(),
+                        e.getJoinedAt()
+                ))
+                .toList();
+    }
 }

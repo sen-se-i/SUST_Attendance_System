@@ -12,7 +12,6 @@ import {
   Users,
   AlertTriangle,
   ChevronRight,
-  Plus,
   Square,
   Play,
   CheckCircle2,
@@ -28,10 +27,9 @@ export default function TeacherClassDetailPage() {
 
   const [classInfo, setClassInfo] = useState(null);
   const [historySessions, setHistorySessions] = useState([]);
-  const [roster, setRoster] = useState([]);
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
-  const [rosterText, setRosterText] = useState("");
   const [busy, setBusy] = useState(false);
 
   // Student Control Modal State
@@ -47,8 +45,8 @@ export default function TeacherClassDetailPage() {
       const found = classes.find((c) => c.id === classId);
       if (found) setClassInfo(found);
 
-      const rosterData = await api(`/api/classes/${classId}/roster`);
-      setRoster(rosterData);
+      const students = await api(`/api/classes/${classId}/students`);
+      setEnrolledStudents(students);
 
       const records = await api(`/api/attendance/classes/${classId}`);
       setAttendanceRecords(records);
@@ -114,25 +112,6 @@ export default function TeacherClassDetailPage() {
     }
   }
 
-  async function handleSaveRoster(e) {
-    e.preventDefault();
-    const registrationNos = rosterText.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-    if (!registrationNos.length) return;
-    setBusy(true);
-    try {
-      const result = await api(`/api/classes/${classId}/roster`, {
-        method: "POST",
-        body: JSON.stringify({ registrationNos }),
-      });
-      notify(`Roster saved (${result.accepted} accepted)`, "success");
-      setRosterText("");
-      await loadData();
-    } catch (error) {
-      notify(error instanceof ApiError ? error.message : "Failed to save roster", "danger");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   // Open Student Control Modal
   async function openStudentModal(student) {
@@ -303,64 +282,51 @@ export default function TeacherClassDetailPage() {
         )}
       </div>
 
-      {/* Student Roster & Control Section */}
+      {/* Active Students Section */}
       <div className="panel glass-panel" style={{ marginTop: 24, border: "1px solid #213042" }}>
         <h2>
-          <Users size={20} color="#00E6FF" /> Class Student Roster
+          <Users size={20} color="#00E6FF" /> Active Students ({enrolledStudents.length})
         </h2>
 
-        {/* Save Roster Form */}
-        <form onSubmit={handleSaveRoster} style={{ marginBottom: 20 }}>
-          <label className="form-label" style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
-            Add / Allowlist Student Registration Numbers (one per line):
-          </label>
-          <textarea
-            className="form-input"
-            rows="3"
-            placeholder="2023831001&#10;2023831002"
-            value={rosterText}
-            onChange={(e) => setRosterText(e.target.value)}
-            style={{ fontFamily: "monospace", fontSize: "0.9rem" }}
-          />
-          <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }} disabled={busy}>
-            <Plus size={16} /> Update Class Roster
-          </button>
-        </form>
-
-        {/* Roster Table */}
-        {roster.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "16px", color: "#94a3b8" }}>No students allowlisted for this class yet.</div>
+        {enrolledStudents.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
+            <Users size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+            <p style={{ margin: 0 }}>No students have joined yet.</p>
+            <p style={{ margin: "4px 0 0", fontSize: "0.8rem" }}>Share the class code with students so they can join.</p>
+          </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table className="table" style={{ width: "100%", textAlign: "left" }}>
               <thead>
                 <tr>
+                  <th>#</th>
                   <th>Registration No</th>
-                  <th>Joined Status</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                  <th>Joined At</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {roster.map((r) => (
-                  <tr key={r.registrationNo} style={{ borderBottom: "1px solid #213042" }}>
-                    <td style={{ color: "#ffffff", fontWeight: 700, fontFamily: "monospace" }}>{r.registrationNo}</td>
+                {enrolledStudents.map((s, idx) => (
+                  <tr key={s.registrationNo} style={{ borderBottom: "1px solid #213042" }}>
+                    <td style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{idx + 1}</td>
+                    <td style={{ color: "#ffffff", fontWeight: 700, fontFamily: "monospace" }}>{s.registrationNo}</td>
+                    <td style={{ color: "#cbd5e1" }}>{s.name || "—"}</td>
                     <td>
-                      {r.joined ? (
-                        <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>
-                          Joined App
-                        </span>
-                      ) : (
-                        <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>Pending</span>
-                      )}
+                      <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>Active</span>
+                    </td>
+                    <td style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+                      {s.joinedAt ? new Date(s.joinedAt).toLocaleDateString() : "—"}
                     </td>
                     <td>
                       <button
                         type="button"
                         className="btn btn-secondary"
                         style={{ padding: "4px 12px", fontSize: "0.8rem", color: "#00E6FF" }}
-                        onClick={() => openStudentModal(r)}
+                        onClick={() => openStudentModal(s)}
                       >
-                        Manage Student
+                        Manage
                       </button>
                     </td>
                   </tr>

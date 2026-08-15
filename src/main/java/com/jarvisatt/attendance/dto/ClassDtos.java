@@ -41,5 +41,6 @@ public final class ClassDtos {
         }
     }
     public record JoinClassResponse(UUID enrollmentId, UUID classId, String status) {}
+    public record EnrolledStudentResponse(String registrationNo, String name, String status, java.time.OffsetDateTime joinedAt) {}
     public record RosterEntryResponse(String registrationNo, boolean joined) {}
 }

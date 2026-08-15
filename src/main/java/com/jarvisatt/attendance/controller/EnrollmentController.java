@@ -3,11 +3,13 @@ package com.jarvisatt.attendance.controller;
 import com.jarvisatt.attendance.dto.ClassDtos.*;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import com.jarvisatt.attendance.service.EnrollmentService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/classes")
@@ -22,5 +24,11 @@ public class EnrollmentController {
             throw new com.jarvisatt.attendance.exception.ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "Class Code is required");
         }
         return enrollmentService.joinDirect(request, principal);
+    }
+
+    @GetMapping("/{classId}/students")
+    @PreAuthorize("hasRole('ADMIN')")
+    List<EnrolledStudentResponse> getEnrolledStudents(@PathVariable UUID classId) {
+        return enrollmentService.getEnrolledStudents(classId);
     }
 }
