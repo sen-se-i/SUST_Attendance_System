@@ -29,14 +29,17 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Initializing demo seed data...");
 
         // 1. Seed Teacher
-        User teacher = userRepository.findByEmail("teacher@example.com")
-                .orElseGet(() -> {
-                    User u = new User();
-                    u.setEmail("teacher@example.com");
-                    u.setPasswordHash(passwordEncoder.encode("password"));
-                    u.setRole(Role.ADMIN);
-                    return userRepository.save(u);
-                });
+        User teacher = userRepository.findByEmail("teacher@example.com").map(u -> {
+            u.setPasswordHash(passwordEncoder.encode("password"));
+            u.setRole(Role.ADMIN);
+            return userRepository.save(u);
+        }).orElseGet(() -> {
+            User u = new User();
+            u.setEmail("teacher@example.com");
+            u.setPasswordHash(passwordEncoder.encode("password"));
+            u.setRole(Role.ADMIN);
+            return userRepository.save(u);
+        });
 
         // 2. Seed Student (faria24mahmood@gmail.com)
         userRepository.findByEmail("faria24mahmood@gmail.com").ifPresentOrElse(
