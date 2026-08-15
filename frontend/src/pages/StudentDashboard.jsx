@@ -5,6 +5,7 @@ import { useToast } from "../lib/ToastContext";
 import { useAuth } from "../lib/AuthContext";
 import { getDeviceInstallId } from "../lib/deviceId";
 import { AttendanceTable } from "../components/AttendanceTable";
+import { captureCalibratedLocation } from "../lib/location";
 
 const initialJoinForm = { classCode: "", registrationNo: "" };
 
@@ -81,39 +82,25 @@ export default function StudentDashboard() {
     if (!activeSession) return;
     setClaiming(true);
 
-    const submitLocation = async (lat, lon) => {
-      try {
-        const result = await api("/api/attendance/claim", {
-          method: "POST",
-          body: JSON.stringify({
-            sessionId: activeSession.sessionId,
-            latitude: lat,
-            longitude: lon,
-            deviceInstallId,
-          }),
-        });
-        setLastClaimResult(result);
-        notify(`Attendance Registered! (${result.distanceMeters?.toFixed(1)}m from teacher)`, "success");
-        await loadAttendance();
-      } catch (error) {
-        notify(error instanceof ApiError ? error.message : "Attendance verification failed", "danger");
-      } finally {
-        setClaiming(false);
-      }
-    };
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => submitLocation(pos.coords.latitude, pos.coords.longitude),
-        (error) => {
-          const detail = error?.message ? ` ${error.message}` : "";
-          notify(`Could not capture your GPS location.${detail} Please enable location permission and try again.`, "danger");
-          setClaiming(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    } else {
-      notify("Geolocation is not supported by this browser. Please use the mobile app or a GPS-capable browser.", "danger");
+    try {
+      const location = await captureCalibratedLocation(activeSession.radiusMeters || 20);
+      const result = await api("/api/attendance/claim", {
+        method: "POST",
+        body: JSON.stringify({
+          sessionId: activeSession.sessionId,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracyMeters: location.accuracyMeters,
+          capturedAt: location.capturedAt,
+          deviceInstallId,
+        }),
+      });
+      setLastClaimResult(result);
+      notify(`Attendance Registered! (${result.distanceMeters?.toFixed(1)}m from teacher, +/-${result.accuracyMeters?.toFixed(1)}m accuracy)`, "success");
+      await loadAttendance();
+    } catch (error) {
+      notify(error instanceof ApiError ? error.message : `Could not verify GPS location. ${error?.message || "Please enable location permission and try again."}`, "danger");
+    } finally {
       setClaiming(false);
     }
   }
@@ -185,15 +172,15 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      <div className="panel glass-panel scanner-panel" style={{ border: "1px solid rgba(56, 189, 248, 0.4)" }}>
+      <div className="panel glass-panel scanner-panel" style={{ border: "1px solid rgba(0, 230, 255, 0.35)", boxShadow: "0 0 20px rgba(0, 230, 255, 0.08)" }}>
         <h2>
-          <Navigation size={18} color="#38bdf8" /> GPS Attendance Verification
+          <Navigation size={18} color="#00E6FF" /> GPS Attendance Verification
         </h2>
 
         {activeSession ? (
-          <div style={{ textAlign: "center", padding: "16px", background: "rgba(15, 15, 26, 0.6)", borderRadius: "12px", margin: "16px 0" }}>
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", color: "#4ade80", fontWeight: "bold" }}>
-              <MapPin size={20} color="#38bdf8" /> SESSION ACTIVE ({activeSession.radiusMeters || 10}m Radius)
+          <div style={{ textAlign: "center", padding: "16px", background: "rgba(10, 16, 26, 0.8)", border: "1px solid #213042", borderRadius: "12px", margin: "16px 0" }}>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", color: "#00FF88", fontWeight: "bold" }}>
+              <MapPin size={20} color="#00E6FF" /> SESSION ACTIVE ({activeSession.radiusMeters || 20}m Radius)
             </div>
             <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "8px 0 16px" }}>
               Ensure your phone location / GPS is turned on to mark present.
@@ -207,7 +194,7 @@ export default function StudentDashboard() {
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ width: "100%", padding: "14px", fontSize: "1.05rem", background: "linear-gradient(135deg, #10b981, #059669)" }}
+                style={{ width: "100%", padding: "14px", fontSize: "1.05rem" }}
                 onClick={handleClaimAttendance}
                 disabled={claiming}
               >
@@ -217,8 +204,8 @@ export default function StudentDashboard() {
           </div>
         ) : (
           <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
-            <MapPin size={36} color="#64748b" style={{ marginBottom: "8px" }} />
-            <p style={{ fontWeight: "bold", color: "#cbd5e1" }}>No Active Session</p>
+            <MapPin size={36} color="#3B4D61" style={{ marginBottom: "8px" }} />
+            <p style={{ fontWeight: "bold", color: "#FFFFFF" }}>No Active Session</p>
             <p style={{ fontSize: "0.85rem" }}>Select a class above and check when your teacher starts an attendance session.</p>
           </div>
         )}

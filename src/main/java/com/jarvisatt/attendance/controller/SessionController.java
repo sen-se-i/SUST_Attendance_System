@@ -50,8 +50,8 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     CurrentTickResponse current(@PathVariable UUID sessionId) {
         return sessionEngine.currentTick(sessionId)
-                .map(tick -> new CurrentTickResponse(sessionId, tick.tickIndex(), tick.qrPayload(), "ACTIVE", tick.expiresAt(), null, null, null))
-                .orElseGet(() -> new CurrentTickResponse(sessionId, null, null, "WAITING", OffsetDateTime.now(), null, null, null));
+                .map(tick -> new CurrentTickResponse(sessionId, tick.tickIndex(), tick.qrPayload(), "ACTIVE", tick.expiresAt(), null, null, null, null))
+                .orElseGet(() -> new CurrentTickResponse(sessionId, null, null, "WAITING", OffsetDateTime.now(), null, null, null, null));
     }
 
     @GetMapping(value = "/{sessionId}/qr.png", produces = MediaType.IMAGE_PNG_VALUE)

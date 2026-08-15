@@ -4,13 +4,21 @@ import 'package:geolocator/geolocator.dart';
 class LocationResult {
   final double latitude;
   final double longitude;
+  final double accuracyMeters;
+  final DateTime capturedAt;
   final String? error;
 
-  LocationResult({required this.latitude, required this.longitude, this.error});
+  LocationResult({
+    required this.latitude,
+    required this.longitude,
+    required this.accuracyMeters,
+    required this.capturedAt,
+    this.error,
+  });
 }
 
 class LocationService {
-  static Future<LocationResult> getCurrentLocation() async {
+  static Future<LocationResult> getCurrentLocation({double radiusMeters = 20.0}) async {
     bool serviceEnabled;
     LocationPermission permission;
 
@@ -19,6 +27,8 @@ class LocationService {
       return LocationResult(
         latitude: 0,
         longitude: 0,
+        accuracyMeters: double.infinity,
+        capturedAt: DateTime.now().toUtc(),
         error: 'Location services are disabled on your device. Please turn GPS on.',
       );
     }
@@ -30,6 +40,8 @@ class LocationService {
         return LocationResult(
           latitude: 0,
           longitude: 0,
+          accuracyMeters: double.infinity,
+          capturedAt: DateTime.now().toUtc(),
           error: 'Location permission denied.',
         );
       }
@@ -39,23 +51,58 @@ class LocationService {
       return LocationResult(
         latitude: 0,
         longitude: 0,
+        accuracyMeters: double.infinity,
+        capturedAt: DateTime.now().toUtc(),
         error: 'Location permissions are permanently denied. Please enable them in app settings.',
       );
     }
 
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
+      Position? best;
+      final targetAccuracyMeters = max(3.0, radiusMeters);
+
+      for (int i = 0; i < 6; i++) {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.bestForNavigation,
+          timeLimit: const Duration(seconds: 6),
+        );
+
+        if (best == null || position.accuracy < best.accuracy) {
+          best = position;
+        }
+        if (position.accuracy <= targetAccuracyMeters) {
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: 700));
+      }
+
+      final position = best;
+      if (position == null) {
+        throw Exception('No GPS fix returned');
+      }
+
+      if (position.accuracy > targetAccuracyMeters) {
+        return LocationResult(
+          latitude: position.latitude,
+          longitude: position.longitude,
+          accuracyMeters: position.accuracy,
+          capturedAt: (position.timestamp ?? DateTime.now()).toUtc(),
+          error: 'GPS accuracy is ${position.accuracy.toStringAsFixed(1)}m, but this session needs ${targetAccuracyMeters.toStringAsFixed(1)}m or better. Stand still near a window and try again.',
+        );
+      }
+
       return LocationResult(
         latitude: position.latitude,
         longitude: position.longitude,
+        accuracyMeters: position.accuracy,
+        capturedAt: (position.timestamp ?? DateTime.now()).toUtc(),
       );
     } catch (e) {
       return LocationResult(
         latitude: 0,
         longitude: 0,
+        accuracyMeters: double.infinity,
+        capturedAt: DateTime.now().toUtc(),
         error: 'Could not read your current GPS location. Please keep location enabled and try again outdoors or near a window.',
       );
     }

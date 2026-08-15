@@ -55,9 +55,9 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
                   height: 150,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF6366F1).withOpacity(opacity * 0.3),
+                    color: const Color(0xFF00E6FF).withOpacity(opacity * 0.3),
                     border: Border.all(
-                      color: const Color(0xFF6366F1).withOpacity(opacity),
+                      color: const Color(0xFF00E6FF).withOpacity(opacity),
                       width: 2,
                     ),
                   ),
@@ -71,12 +71,12 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(0xFF818CF8).withOpacity(0.4),
-                      const Color(0xFF4F46E5).withOpacity(0.1),
+                      const Color(0xFF00E6FF).withOpacity(0.4),
+                      const Color(0xFF00C8E0).withOpacity(0.1),
                     ],
                   ),
                   border: Border.all(
-                    color: const Color(0xFF818CF8),
+                    color: const Color(0xFF00E6FF),
                     width: 2,
                   ),
                 ),
@@ -87,7 +87,7 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
                 children: [
                   const Icon(
                     Icons.location_on_rounded,
-                    color: Color(0xFF38BDF8),
+                    color: Color(0xFF00E6FF),
                     size: 38,
                   ),
                   const SizedBox(height: 4),

@@ -10,7 +10,7 @@ import java.util.UUID;
 public final class AuthDtos {
     private AuthDtos() {}
 
-    public record RegisterRequest(@Email String email, @NotBlank String password, @NotNull Role role, String registrationNo) {}
-    public record LoginRequest(@Email String email, @NotBlank String password) {}
+    public record RegisterRequest(@Email String email, @NotBlank String password, @NotNull Role role, String registrationNo, String deviceInstallId) {}
+    public record LoginRequest(@Email String email, @NotBlank String password, String deviceInstallId) {}
     public record AuthResponse(String token, UUID userId, String email, Role role, String registrationNo) {}
 }

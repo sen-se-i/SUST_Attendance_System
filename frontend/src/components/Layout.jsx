@@ -8,9 +8,9 @@ export function Layout({ children }) {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <img src="/logo.png" alt="SWE-Attendance Logo" style={{ width: 32, height: 32, objectFit: "contain" }} />
+          <img src="/logo.png" alt="SWE Attendance System Logo" style={{ width: 32, height: 32, objectFit: "contain" }} />
           <div>
-            <h1>SWE-Attendance</h1>
+            <h1>SWE Attendance System</h1>
             <p className="subtitle">
               {user ? `${user.role === "ADMIN" ? "Teacher" : "Student"} console` : "GPS Location Geofence Attendance"}
             </p>

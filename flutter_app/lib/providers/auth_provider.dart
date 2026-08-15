@@ -39,7 +39,8 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final response = await ApiService.login(email, password);
+    final deviceId = await ApiService.getDeviceInstallId();
+    final response = await ApiService.login(email, password, deviceInstallId: deviceId);
     _isLoading = false;
 
     if (response.isSuccess && response.data != null) {
@@ -71,11 +72,13 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    final deviceId = await ApiService.getDeviceInstallId();
     final response = await ApiService.register(
       email: email,
       password: password,
       role: role,
       registrationNo: registrationNo,
+      deviceInstallId: deviceId,
     );
     _isLoading = false;
 

@@ -103,8 +103,8 @@ export default function TeacherDashboard() {
     if (!selectedClass) return;
     setBusy(true);
     try {
-      if (!Number.isFinite(params.latitude) || !Number.isFinite(params.longitude)) {
-        throw new Error("Teacher GPS location is required to start an attendance session.");
+      if (!Number.isFinite(params.latitude) || !Number.isFinite(params.longitude) || !Number.isFinite(params.accuracyMeters)) {
+        throw new Error("A calibrated teacher GPS location is required to start an attendance session.");
       }
       const started = await api("/api/sessions/start", {
         method: "POST",
@@ -112,13 +112,15 @@ export default function TeacherDashboard() {
           classId: selectedClass.id,
           latitude: params.latitude,
           longitude: params.longitude,
-          radiusMeters: params.radiusMeters || 10.0,
+          accuracyMeters: params.accuracyMeters,
+          capturedAt: params.capturedAt,
+          radiusMeters: params.radiusMeters || 20.0,
           totalTicks: 150,
           intervalSeconds: 1,
         }),
       });
       setSession(started);
-      notify(`GPS Session started (${params.radiusMeters || 10}m radius)`, "success");
+      notify(`GPS Session started (${params.radiusMeters || 20}m radius, +/-${params.accuracyMeters.toFixed(1)}m accuracy)`, "success");
     } catch (error) {
       notify(error instanceof ApiError ? error.message : "Failed to start session", "danger");
     } finally {

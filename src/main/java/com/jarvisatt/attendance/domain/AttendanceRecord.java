@@ -52,6 +52,9 @@ public class AttendanceRecord {
     @Column(name = "distance_meters")
     private Double distanceMeters;
 
+    @Column(name = "accuracy_meters")
+    private Double accuracyMeters;
+
     @Column(name = "verification_status")
     private String verificationStatus = "VERIFIED";
 }

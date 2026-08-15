@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { api, getToken, setToken } from "./api";
+import { getDeviceInstallId } from "./deviceId";
 
 const USER_KEY = "jarvisatt.user";
 const AuthContext = createContext(null);
@@ -25,12 +26,20 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(
-    (credentials) => api("/api/auth/login", { method: "POST", body: JSON.stringify(credentials) }).then(applyAuth),
+    (credentials) => {
+      const deviceInstallId = getDeviceInstallId();
+      const body = { ...credentials, deviceInstallId };
+      return api("/api/auth/login", { method: "POST", body: JSON.stringify(body) }).then(applyAuth);
+    },
     [applyAuth],
   );
 
   const register = useCallback(
-    (payload) => api("/api/auth/register", { method: "POST", body: JSON.stringify(payload) }).then(applyAuth),
+    (payload) => {
+      const deviceInstallId = getDeviceInstallId();
+      const body = { ...payload, deviceInstallId };
+      return api("/api/auth/register", { method: "POST", body: JSON.stringify(body) }).then(applyAuth);
+    },
     [applyAuth],
   );
 

@@ -52,12 +52,3 @@ export async function api(path, options = {}) {
   const text = await response.text();
   return text ? JSON.parse(text) : null;
 }
-
-export async function fetchQrBlob(sessionId) {
-  const token = getToken();
-  const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/qr.png?bust=${Date.now()}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!response.ok) throw new ApiError(`QR fetch failed (${response.status})`);
-  return response.blob();
-}

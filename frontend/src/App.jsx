@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { ToastProvider } from "./lib/ToastContext";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { SciFiLoadingScreen } from "./components/SciFiLoadingScreen";
 import AuthPage from "./pages/AuthPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
@@ -34,9 +36,12 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const [loadingApp, setLoadingApp] = useState(true);
+
   return (
     <AuthProvider>
       <ToastProvider>
+        {loadingApp && <SciFiLoadingScreen onFinished={() => setLoadingApp(false)} minDuration={2200} />}
         <AppRoutes />
       </ToastProvider>
     </AuthProvider>
