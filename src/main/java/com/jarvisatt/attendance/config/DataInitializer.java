@@ -76,6 +76,13 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(student);
         }
 
+        // 4. Seed Other Teacher (dummyteacher@gmail.com)
+        userRepository.findByEmail("dummyteacher@gmail.com").ifPresent(u -> {
+            u.setPasswordHash(passwordEncoder.encode("password"));
+            u.setRole(Role.ADMIN);
+            userRepository.save(u);
+        });
+
         List<ClassEntity> teacherClasses = classRepository.findByTeacherId(teacher.getId());
         Optional<ClassEntity> existingSwe301 = classRepository.findByCode("SWE301");
         ClassEntity demoClass;
