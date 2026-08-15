@@ -38,4 +38,12 @@ public class RosterController {
     List<RosterEntryResponse> listStudents(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
         return rosterService.listRoster(classId, principal);
     }
+
+    @DeleteMapping("/students/{registrationNo}")
+    @PreAuthorize("hasRole('ADMIN')")
+    Map<String, String> removeStudent(@PathVariable UUID classId, @PathVariable String registrationNo,
+                                      @AuthenticationPrincipal UserPrincipal principal) {
+        rosterService.removeStudentFromClass(classId, registrationNo, principal);
+        return Map.of("status", "REMOVED");
+    }
 }

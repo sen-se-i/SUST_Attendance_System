@@ -48,7 +48,7 @@ public class ClassService {
         }
 
         ClassEntity entity = new ClassEntity();
-        entity.setCode(uniqueCode(request.subjectCode(), request.academicSession()));
+        entity.setCode(generateClassCode(request.department(), request.academicSession(), request.semester(), request.subjectCode()));
         entity.setDepartment(request.department());
         entity.setAcademicSession(request.academicSession());
         entity.setSemester(request.semester());
@@ -75,28 +75,87 @@ public class ClassService {
         return classRepository.findByTeacherId(teacher.id()).stream().map(this::response).toList();
     }
 
-    private String uniqueCode(String subjectCode, String academicSession) {
-        if (subjectCode == null || subjectCode.isBlank()) {
-            return "CLASS" + (System.currentTimeMillis() % 10000);
+    /**
+     * Generates a human-readable, structured class code:
+     * Format: <DEPT><SESSION>-<YEAR_SEM>-<COURSE_NUM>
+     * Example 1: Software Engineering, 2024-25, Year 1 Semester 2, EEE0712-1102W -> SWE2425-12-1102W
+     * Example 2: Software Engineering, 2023-24, Year 4 Semester 2, SWE0613-4125  -> SWE2324-42-4125
+     */
+    private String generateClassCode(String department, String academicSession, String semester, String subjectCode) {
+        // 1. Department code
+        String deptPrefix = "SWE";
+        if (department != null) {
+            String cleanDept = department.trim().toUpperCase();
+            if (cleanDept.contains("SOFTWARE")) {
+                deptPrefix = "SWE";
+            } else if (cleanDept.contains("COMPUTER") || cleanDept.contains("CSE")) {
+                deptPrefix = "CSE";
+            } else if (cleanDept.contains("ELECTRICAL") || cleanDept.contains("EEE")) {
+                deptPrefix = "EEE";
+            } else {
+                String[] words = cleanDept.split("\\s+");
+                StringBuilder sb = new StringBuilder();
+                for (String w : words) {
+                    if (!w.isBlank()) sb.append(w.charAt(0));
+                }
+                deptPrefix = sb.length() > 0 ? sb.toString() : "CLASS";
+            }
         }
-        String cleanSubject = subjectCode.trim();
-        if (cleanSubject.length() > 25) {
-            cleanSubject = cleanSubject.substring(0, 25);
+
+        // 2. Session code (e.g. "2024-25" -> "2425", "2023-24" -> "2324")
+        String sessionPart = "2425";
+        if (academicSession != null) {
+            String digits = academicSession.replaceAll("\\D", "");
+            if (digits.length() == 6) { // e.g. 202425
+                sessionPart = digits.substring(2, 4) + digits.substring(4, 6); // "24" + "25" -> "2425"
+            } else if (digits.length() == 8) { // e.g. 20242025
+                sessionPart = digits.substring(2, 4) + digits.substring(6, 8); // "24" + "25" -> "2425"
+            } else if (digits.length() >= 4) {
+                sessionPart = digits.substring(digits.length() - 4);
+            } else if (!digits.isEmpty()) {
+                sessionPart = digits;
+            }
         }
-        if (!classRepository.existsByCode(cleanSubject)) {
-            return cleanSubject;
+
+        // 3. Year & Semester code (e.g. "Year 1 Semester 2" -> "12", "Year 4 Semester 2" -> "42")
+        String semPart = "11";
+        if (semester != null) {
+            String digits = semester.replaceAll("\\D", "");
+            if (digits.length() >= 2) {
+                semPart = digits.substring(0, 2);
+            } else if (digits.length() == 1) {
+                semPart = digits;
+            }
         }
-        String cleanAlpha = cleanSubject.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
-        if (cleanAlpha.length() > 25) {
-            cleanAlpha = cleanAlpha.substring(0, 25);
+
+        // 4. Course number from subject code (e.g. "EEE0712-1102W" -> "1102W", "SWE0613-4125" -> "4125")
+        String coursePart = "0000";
+        if (subjectCode != null && !subjectCode.isBlank()) {
+            String cleanSubject = subjectCode.trim();
+            if (cleanSubject.contains("-")) {
+                coursePart = cleanSubject.substring(cleanSubject.lastIndexOf('-') + 1).trim();
+            } else {
+                coursePart = cleanSubject.replaceAll("[^A-Za-z0-9]", "");
+            }
         }
-        if (!classRepository.existsByCode(cleanAlpha)) {
-            return cleanAlpha;
+
+        // Base code: e.g. SWE2425-12-1102W
+        String baseCode = deptPrefix + sessionPart + "-" + semPart + "-" + coursePart;
+        if (baseCode.length() > 28) {
+            baseCode = baseCode.substring(0, 28);
         }
+
+        if (!classRepository.existsByCode(baseCode)) {
+            return baseCode;
+        }
+
         int counter = 1;
         String candidate;
         do {
-            candidate = cleanAlpha + counter;
+            candidate = baseCode + "-" + counter;
+            if (candidate.length() > 30) {
+                candidate = baseCode.substring(0, 27) + "-" + counter;
+            }
             counter++;
         } while (classRepository.existsByCode(candidate));
         return candidate;

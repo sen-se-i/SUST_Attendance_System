@@ -40,8 +40,14 @@ public class AuthService {
         if (userRepository.existsByEmail(request.email())) {
             throw new ApiException(HttpStatus.CONFLICT, "Email already registered");
         }
-        if (request.role() == Role.STUDENT && (request.registrationNo() == null || request.registrationNo().isBlank())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Student registration number is required");
+        if (request.role() == Role.STUDENT) {
+            if (request.registrationNo() == null || request.registrationNo().isBlank()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Student registration number is required");
+            }
+            String regNo = request.registrationNo().trim();
+            if (userRepository.existsByRegistrationNo(regNo)) {
+                throw new ApiException(HttpStatus.CONFLICT, "Registration number '" + regNo + "' is already registered by another student");
+            }
         }
         User user = new User();
         user.setEmail(request.email().trim().toLowerCase());

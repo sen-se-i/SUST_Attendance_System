@@ -220,27 +220,27 @@ export default function TeacherDashboard() {
   return (
     <div style={{ paddingBottom: 100 }}>
       {/* Top Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <h1 style={{ fontSize: "1.8rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>Active Teacher Classes</h1>
-          <p style={{ color: "#94a3b8", fontSize: "0.9rem", margin: "4px 0 0" }}>Select any class to manage sessions and attendance.</p>
+          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>Active Teacher Classes</h1>
+          <p style={{ color: "#94a3b8", fontSize: "0.82rem", margin: "2px 0 0" }}>Select any class to manage sessions and attendance.</p>
         </div>
-        <button type="button" className="btn btn-secondary" onClick={loadClasses}>
-          <RefreshCw size={16} /> Refresh
+        <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.82rem" }} onClick={loadClasses}>
+          <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
       {/* Active Classes Grid */}
       {classes.length === 0 ? (
-        <div className="panel glass-panel" style={{ textAlign: "center", padding: "48px 24px", border: "1px dashed #213042" }}>
-          <BookOpen size={48} color="#3B4D61" style={{ marginBottom: 12 }} />
-          <h3 style={{ color: "#ffffff" }}>No Active Classes Created</h3>
-          <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: 20 }}>
+        <div className="panel glass-panel" style={{ textAlign: "center", padding: "36px 18px", border: "1px dashed #213042" }}>
+          <BookOpen size={40} color="#3B4D61" style={{ marginBottom: 10 }} />
+          <h3 style={{ color: "#ffffff", fontSize: "1.1rem" }}>No Active Classes Created</h3>
+          <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: 16 }}>
             Click the "+ CREATE" button at the bottom of the screen to add your first course.
           </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
           {classes.map((item) => (
             <div
               key={item.id}
@@ -248,30 +248,31 @@ export default function TeacherDashboard() {
               style={{
                 border: "1px solid #213042",
                 cursor: "pointer",
+                padding: "16px",
                 transition: "all 0.2s ease",
               }}
               onClick={() => navigate(`/teacher/class/${item.id}`)}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                 {item.credits ? (
-                  <span style={{ color: "#00FF88", fontWeight: 700, fontSize: "0.85rem" }}>{item.credits} Credits</span>
+                  <span style={{ color: "#00FF88", fontWeight: 700, fontSize: "0.8rem" }}>{item.credits} Credits</span>
                 ) : <span />}
-                <span className="badge badge-success" style={{ fontSize: "0.72rem", fontFamily: "monospace" }}>
+                <span className="badge badge-success" style={{ fontSize: "0.7rem", fontFamily: "monospace", padding: "2px 6px" }}>
                   CODE: {item.code}
                 </span>
               </div>
               {/* Subject Name — primary, large */}
-              <h3 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 4px" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff", margin: "0 0 3px" }}>
                 {item.subjectName || item.subjectCode}
               </h3>
               {/* Subject Code + Session — secondary */}
-              <p style={{ color: "#00E6FF", fontSize: "0.85rem", fontWeight: 600, margin: "0 0 12px" }}>
+              <p style={{ color: "#00E6FF", fontSize: "0.8rem", fontWeight: 600, margin: "0 0 10px" }}>
                 {item.subjectCode} &nbsp;•&nbsp; {item.academicSession} &nbsp;•&nbsp; {item.semester || ""}
               </p>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #213042", paddingTop: 12, marginTop: 12, fontSize: "0.8rem", color: "#94a3b8" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #213042", paddingTop: 10, marginTop: 10, fontSize: "0.78rem", color: "#94a3b8" }}>
                 <span>{item.department}</span>
                 <span style={{ color: "#00E6FF", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                  Open Details <ChevronRight size={14} />
+                  Open Details <ChevronRight size={13} />
                 </span>
               </div>
             </div>

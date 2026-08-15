@@ -156,10 +156,23 @@ export default function TeacherClassDetailPage() {
     });
   }
 
+  function confirmRemoveStudent(student) {
+    setConfirmModal({
+      open: true,
+      type: "REMOVE_STUDENT",
+      data: student,
+      title: `Remove ${student.registrationNo} from Class?`,
+      message: `Are you sure you want to remove student ${student.registrationNo} from this class? They will no longer be able to submit attendance for this class, and their attendance history in this class will be deleted.`,
+    });
+  }
+
   async function executeDeletion() {
     setBusy(true);
     try {
-      if (confirmModal.type === "FULL") {
+      if (confirmModal.type === "REMOVE_STUDENT") {
+        await api(`/api/classes/${classId}/students/${confirmModal.data.registrationNo}`, { method: "DELETE" });
+        notify(`Student ${confirmModal.data.registrationNo} removed from class`, "success");
+      } else if (confirmModal.type === "FULL") {
         await api(`/api/attendance/classes/${classId}/students/${selectedStudent.studentId || selectedStudent.registrationNo}`, { method: "DELETE" });
         notify(`All attendance history deleted for ${selectedStudent.registrationNo}`, "success");
       } else if (confirmModal.type === "BATCH") {
@@ -173,7 +186,7 @@ export default function TeacherClassDetailPage() {
       setSelectedStudent(null);
       await loadData();
     } catch (error) {
-      notify(error instanceof ApiError ? error.message : "Failed to delete attendance records", "danger");
+      notify(error instanceof ApiError ? error.message : "Action failed", "danger");
     } finally {
       setBusy(false);
     }
@@ -183,48 +196,34 @@ export default function TeacherClassDetailPage() {
     setSelectedRecordIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   }
 
-  async function handleDeleteSession(sessionId) {
-    setBusy(true);
-    try {
-      await api(`/api/sessions/${sessionId}`, { method: "DELETE" });
-      notify("Session and all its records deleted.", "success");
-      setDeleteSessionModal({ open: false, sessionId: null });
-      await loadData();
-    } catch (error) {
-      notify(error instanceof ApiError ? error.message : "Failed to delete session", "danger");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div style={{ paddingBottom: 60 }}>
       {/* Back to Dashboard Bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <button type="button" className="btn btn-secondary" onClick={() => navigate("/teacher")}>
-          <ArrowLeft size={16} /> Back to Dashboard
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={() => navigate("/teacher")}>
+          <ArrowLeft size={15} /> Back to Dashboard
         </button>
       </div>
 
       {/* Class Header Card */}
       {classInfo && (
-        <div className="panel glass-panel" style={{ border: "1px solid #213042", marginBottom: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+        <div className="panel glass-panel" style={{ border: "1px solid #213042", marginBottom: 20, padding: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <span className="badge badge-success" style={{ marginBottom: 8, fontSize: "0.8rem" }}>
+              <span className="badge badge-success" style={{ marginBottom: 6, fontSize: "0.75rem", fontFamily: "monospace" }}>
                 CODE: {classInfo.code}
               </span>
-              <h1 style={{ fontSize: "1.8rem", fontWeight: 800, color: "#ffffff", margin: "4px 0" }}>
+              <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", margin: "2px 0 4px" }}>
                 {classInfo.subjectName || classInfo.subjectCode}
               </h1>
-              <p style={{ color: "#00E6FF", fontWeight: 600, fontSize: "0.95rem" }}>
-                {classInfo.department} • {classInfo.academicSession} • {classInfo.semester || "Semester N/A"}
+              <p style={{ color: "#00E6FF", fontWeight: 600, fontSize: "0.85rem", margin: 0 }}>
+                {classInfo.subjectCode} • {classInfo.department} • {classInfo.academicSession} {classInfo.semester ? `• ${classInfo.semester}` : ""}
               </p>
             </div>
             {classInfo.credits && (
-              <div style={{ background: "rgba(0, 230, 255, 0.1)", border: "1px solid #213042", padding: "8px 16px", borderRadius: 8, textAlign: "center" }}>
-                <span style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block" }}>CREDITS</span>
-                <span style={{ color: "#00FF88", fontSize: "1.4rem", fontWeight: 800 }}>{classInfo.credits}</span>
+              <div style={{ background: "rgba(0, 230, 255, 0.1)", border: "1px solid #213042", padding: "6px 12px", borderRadius: 8, textAlign: "center" }}>
+                <span style={{ color: "#94a3b8", fontSize: "0.7rem", display: "block" }}>CREDITS</span>
+                <span style={{ color: "#00FF88", fontSize: "1.15rem", fontWeight: 800 }}>{classInfo.credits}</span>
               </div>
             )}
           </div>
@@ -241,25 +240,25 @@ export default function TeacherClassDetailPage() {
       />
 
       {/* Class History Sessions Table */}
-      <div className="panel glass-panel" style={{ marginTop: 24, border: "1px solid #213042" }}>
-        <h2>
-          <Calendar size={20} color="#00E6FF" /> Class Session History
+      <div className="panel glass-panel" style={{ marginTop: 20, border: "1px solid #213042", padding: 18 }}>
+        <h2 style={{ fontSize: "1.15rem", marginBottom: 4 }}>
+          <Calendar size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Class Session History
         </h2>
-        <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: 16 }}>
-          Past attendance sessions taken for this class. Click any date to view individual student logs.
+        <p style={{ color: "#94a3b8", fontSize: "0.8rem", marginBottom: 14 }}>
+          Past sessions conducted. Click "View Logs" to see student attendance or delete the session.
         </p>
 
         {historySessions.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>No sessions conducted yet.</div>
+          <div style={{ textAlign: "center", padding: "20px", color: "#94a3b8", fontSize: "0.85rem" }}>No sessions conducted yet.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="table" style={{ width: "100%", textAlign: "left" }}>
+            <table className="table" style={{ width: "100%", textAlign: "left", fontSize: "0.85rem" }}>
               <thead>
                 <tr>
-                  <th>Session Date &amp; Time</th>
-                  <th>Status</th>
-                  <th>Verified Students</th>
-                  <th>Actions</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Session Date &amp; Time</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Status</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Verified Students</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -267,37 +266,29 @@ export default function TeacherClassDetailPage() {
                   const isEmpty = s.attendanceCount === 0;
                   return (
                     <tr key={s.sessionId} style={{ borderBottom: "1px solid #213042" }}>
-                      <td style={{ color: "#ffffff", fontWeight: 600 }}>
-                        <Clock size={14} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} />
+                      <td style={{ color: "#ffffff", fontWeight: 600, padding: "10px" }}>
+                        <Clock size={13} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 5 }} />
                         {new Date(s.startedAt).toLocaleString()}
                       </td>
-                      <td>
+                      <td style={{ padding: "10px" }}>
                         <span
                           className={`badge ${s.status === "ENDED" ? "badge-secondary" : "badge-success"}`}
-                          style={{ fontSize: "0.72rem" }}
+                          style={{ fontSize: "0.7rem", padding: "2px 7px" }}
                         >
                           {s.status}
                         </span>
                       </td>
-                      <td style={{ color: isEmpty ? "#ef4444" : "#00FF88", fontWeight: 700 }}>
+                      <td style={{ color: isEmpty ? "#ef4444" : "#00FF88", fontWeight: 700, padding: "10px" }}>
                         {isEmpty ? "0 — No attendance" : `${s.attendanceCount} Student(s)`}
                       </td>
-                      <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <td style={{ padding: "10px" }}>
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          style={{ padding: "4px 12px", fontSize: "0.8rem" }}
+                          style={{ padding: "4px 12px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 4 }}
                           onClick={() => navigate(`/teacher/class/${classId}/session/${s.sessionId}`)}
                         >
-                          View Logs <ChevronRight size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          style={{ padding: "4px 10px", fontSize: "0.8rem" }}
-                          onClick={() => setDeleteSessionModal({ open: true, sessionId: s.sessionId })}
-                        >
-                          <Trash2 size={13} /> Delete
+                          View Logs <ChevronRight size={13} />
                         </button>
                       </td>
                     </tr>
@@ -309,85 +300,61 @@ export default function TeacherClassDetailPage() {
         )}
       </div>
 
-      {/* Delete Session Confirm Modal */}
-      {deleteSessionModal.open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="panel glass-panel" style={{ maxWidth: 420, width: "90%", border: "1px solid #ef4444", padding: 28 }}>
-            <h3 style={{ color: "#ef4444", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-              <Trash2 size={20} /> Delete Session?
-            </h3>
-            <p style={{ color: "#94a3b8", marginBottom: 20, fontSize: "0.9rem" }}>
-              This will permanently delete this session and <strong style={{ color: "#ffffff" }}>all its attendance records</strong>. This action cannot be undone.
-            </p>
-            <div style={{ display: "flex", gap: 12 }}>
-              <button
-                type="button"
-                className="btn btn-danger"
-                disabled={busy}
-                onClick={() => handleDeleteSession(deleteSessionModal.sessionId)}
-                style={{ flex: 1 }}
-              >
-                <Trash2 size={14} /> Yes, Delete
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setDeleteSessionModal({ open: false, sessionId: null })}
-                style={{ flex: 1 }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Active Students Section */}
-      <div className="panel glass-panel" style={{ marginTop: 24, border: "1px solid #213042" }}>
-        <h2>
-          <Users size={20} color="#00E6FF" /> Active Students ({enrolledStudents.length})
+      <div className="panel glass-panel" style={{ marginTop: 20, border: "1px solid #213042", padding: 18 }}>
+        <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>
+          <Users size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Active Students ({enrolledStudents.length})
         </h2>
 
         {enrolledStudents.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
-            <Users size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8", fontSize: "0.85rem" }}>
+            <Users size={28} style={{ opacity: 0.3, marginBottom: 8 }} />
             <p style={{ margin: 0 }}>No students have joined yet.</p>
-            <p style={{ margin: "4px 0 0", fontSize: "0.8rem" }}>Share the class code with students so they can join.</p>
+            <p style={{ margin: "4px 0 0", fontSize: "0.78rem" }}>Share the class code with students so they can join.</p>
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="table" style={{ width: "100%", textAlign: "left" }}>
+            <table className="table" style={{ width: "100%", textAlign: "left", fontSize: "0.85rem" }}>
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Registration No</th>
-                  <th>Name</th>
-                  <th>Status</th>
-                  <th>Joined At</th>
-                  <th>Actions</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>#</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Registration No</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Status</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Joined At</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {enrolledStudents.map((s, idx) => (
                   <tr key={s.registrationNo} style={{ borderBottom: "1px solid #213042" }}>
-                    <td style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{idx + 1}</td>
-                    <td style={{ color: "#ffffff", fontWeight: 700, fontFamily: "monospace" }}>{s.registrationNo}</td>
-                    <td style={{ color: "#cbd5e1" }}>{s.name || "—"}</td>
-                    <td>
-                      <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>Active</span>
+                    <td style={{ color: "#94a3b8", fontSize: "0.8rem", padding: "8px 10px" }}>{idx + 1}</td>
+                    <td style={{ color: "#ffffff", fontWeight: 700, fontFamily: "monospace", fontSize: "0.9rem", padding: "8px 10px" }}>{s.registrationNo}</td>
+                    <td style={{ padding: "8px 10px" }}>
+                      <span className="badge badge-success" style={{ fontSize: "0.7rem", padding: "2px 6px" }}>Active</span>
                     </td>
-                    <td style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+                    <td style={{ color: "#94a3b8", fontSize: "0.78rem", padding: "8px 10px" }}>
                       {s.joinedAt ? new Date(s.joinedAt).toLocaleDateString() : "—"}
                     </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: "4px 12px", fontSize: "0.8rem", color: "#00E6FF" }}
-                        onClick={() => openStudentModal(s)}
-                      >
-                        Manage
-                      </button>
+                    <td style={{ padding: "8px 10px" }}>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: "3px 10px", fontSize: "0.75rem", color: "#00E6FF" }}
+                          onClick={() => openStudentModal(s)}
+                        >
+                          Manage
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          style={{ padding: "3px 8px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: 3 }}
+                          onClick={() => confirmRemoveStudent(s)}
+                          disabled={busy}
+                        >
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -399,26 +366,25 @@ export default function TeacherClassDetailPage() {
 
       {/* Student Control Modal */}
       {selectedStudent && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="panel glass-panel" style={{ width: "min(95vw, 680px)", maxHeight: "90vh", overflowY: "auto", border: "1px solid #00E6FF" }}>
-            <div style={{ borderBottom: "1px solid #213042", paddingBottom: 12, marginBottom: 16 }}>
-              {/* Registration Number (Large) */}
-              <h2 style={{ fontSize: "2rem", fontWeight: 900, color: "#00E6FF", margin: 0, letterSpacing: "1px" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
+          <div className="panel glass-panel" style={{ width: "min(95vw, 620px)", maxHeight: "90vh", overflowY: "auto", border: "1px solid #00E6FF", padding: 20 }}>
+            <div style={{ borderBottom: "1px solid #213042", paddingBottom: 10, marginBottom: 14 }}>
+              {/* Registration Number */}
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 900, color: "#00E6FF", margin: 0, letterSpacing: "0.5px" }}>
                 {selectedStudent.registrationNo}
               </h2>
-              {/* Class ID (Small) */}
-              <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "4px 0 0" }}>CLASS ID: {classId}</p>
+              <p style={{ color: "#94a3b8", fontSize: "0.75rem", margin: "2px 0 0" }}>CLASS ID: {classId}</p>
             </div>
 
             {/* Student Actions */}
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-              <button type="button" className="btn btn-secondary" style={{ color: "#00FF88", borderColor: "rgba(0, 255, 136, 0.4)" }} onClick={handleResetDevice} disabled={busy}>
-                <Smartphone size={16} /> Reset Device ID
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+              <button type="button" className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", color: "#00FF88", borderColor: "rgba(0, 255, 136, 0.4)" }} onClick={handleResetDevice} disabled={busy}>
+                <Smartphone size={14} /> Reset Device
               </button>
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ color: "#00E6FF", borderColor: "rgba(0, 230, 255, 0.4)" }}
+                style={{ padding: "6px 12px", fontSize: "0.8rem", color: "#00E6FF", borderColor: "rgba(0, 230, 255, 0.4)" }}
                 onClick={async () => {
                   const newPass = prompt(`Enter new password for student ${selectedStudent.registrationNo}:`, "123456");
                   if (!newPass || !newPass.trim()) return;
@@ -437,46 +403,55 @@ export default function TeacherClassDetailPage() {
                 }}
                 disabled={busy}
               >
-                <KeyRound size={16} /> Reset Password
+                <KeyRound size={14} /> Reset Password
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                style={{ padding: "6px 12px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 4 }}
+                onClick={() => confirmRemoveStudent(selectedStudent)}
+                disabled={busy}
+              >
+                <Trash2 size={14} /> Remove Student
               </button>
               <button
                 type="button"
                 className={`btn ${showAdvance ? "btn-danger" : "btn-secondary"}`}
-                style={{ marginLeft: "auto" }}
+                style={{ marginLeft: "auto", padding: "6px 12px", fontSize: "0.8rem" }}
                 onClick={() => setShowAdvance(!showAdvance)}
               >
-                {showAdvance ? "Hide Advance Options" : "Advance Options"}
+                {showAdvance ? "Hide Advanced" : "Advanced"}
               </button>
             </div>
 
             {/* Advance Deletion Panel */}
             {showAdvance && (
-              <div style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
-                <h4 style={{ color: "#ef4444", margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}>
-                  <AlertTriangle size={18} /> Danger Zone Deletion Controls
+              <div style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
+                <h4 style={{ color: "#ef4444", margin: "0 0 6px", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: 6 }}>
+                  <AlertTriangle size={16} /> Danger Zone Deletion Controls
                 </h4>
-                <p style={{ color: "#cbd5e1", fontSize: "0.85rem", marginBottom: 12 }}>
+                <p style={{ color: "#cbd5e1", fontSize: "0.8rem", marginBottom: 10 }}>
                   Deleting history will permanently remove attendance records for this student.
                 </p>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button
                     type="button"
                     className="btn"
-                    style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "#ffffff", fontWeight: 700 }}
+                    style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "#ffffff", fontWeight: 700, padding: "6px 12px", fontSize: "0.8rem" }}
                     onClick={confirmDeleteFullHistory}
                     disabled={busy}
                   >
-                    <Trash2 size={16} /> Delete FULL Attendance History
+                    <Trash2 size={14} /> Delete FULL Attendance History
                   </button>
                   {selectedRecordIds.length > 0 && (
                     <button
                       type="button"
                       className="btn"
-                      style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "#ffffff", fontWeight: 700 }}
+                      style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "#ffffff", fontWeight: 700, padding: "6px 12px", fontSize: "0.8rem" }}
                       onClick={confirmDeleteSelectedHistory}
                       disabled={busy}
                     >
-                      <Trash2 size={16} /> Delete Selected ({selectedRecordIds.length}) Records
+                      <Trash2 size={14} /> Delete Selected ({selectedRecordIds.length}) Records
                     </button>
                   )}
                 </div>
@@ -484,18 +459,18 @@ export default function TeacherClassDetailPage() {
             )}
 
             {/* History Table */}
-            <h4 style={{ color: "#ffffff", marginBottom: 12 }}>Student Attendance History Records</h4>
+            <h4 style={{ color: "#ffffff", marginBottom: 10, fontSize: "0.95rem" }}>Student Attendance History</h4>
             {studentHistory.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "20px", color: "#94a3b8" }}>No attendance recorded for this student in this class.</div>
+              <div style={{ textAlign: "center", padding: "16px", color: "#94a3b8", fontSize: "0.82rem" }}>No attendance recorded for this student in this class.</div>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table className="table" style={{ width: "100%", textAlign: "left" }}>
+                <table className="table" style={{ width: "100%", textAlign: "left", fontSize: "0.82rem" }}>
                   <thead>
                     <tr>
-                      {showAdvance && <th>Select</th>}
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Device ID</th>
+                      {showAdvance && <th style={{ padding: "6px 8px" }}>Select</th>}
+                      <th style={{ padding: "6px 8px" }}>Date</th>
+                      <th style={{ padding: "6px 8px" }}>Time</th>
+                      <th style={{ padding: "6px 8px" }}>Device ID</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -505,19 +480,19 @@ export default function TeacherClassDetailPage() {
                       return (
                         <tr key={h.id} style={{ borderBottom: "1px solid #213042", background: isSelected ? "rgba(239, 68, 68, 0.12)" : "transparent" }}>
                           {showAdvance && (
-                            <td>
+                            <td style={{ padding: "6px 8px" }}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => toggleRecordSelect(h.id)}
-                                style={{ width: 18, height: 18, accentColor: "#ef4444" }}
+                                style={{ width: 16, height: 16, accentColor: "#ef4444" }}
                               />
                             </td>
                           )}
-                          <td style={{ color: "#ffffff" }}>{d.toLocaleDateString()}</td>
-                          <td style={{ color: "#00FF88", fontWeight: 600 }}>{d.toLocaleTimeString()}</td>
-                          <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#94a3b8" }}>
-                            {h.deviceInstallId ? h.deviceInstallId.slice(0, 16) + "..." : "Web/N/A"}
+                          <td style={{ color: "#ffffff", padding: "6px 8px" }}>{d.toLocaleDateString()}</td>
+                          <td style={{ color: "#00FF88", fontWeight: 600, padding: "6px 8px" }}>{d.toLocaleTimeString()}</td>
+                          <td style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#94a3b8", padding: "6px 8px" }}>
+                            {h.deviceInstallId ? h.deviceInstallId.slice(0, 14) + "..." : "Web/N/A"}
                           </td>
                         </tr>
                       );
@@ -527,8 +502,8 @@ export default function TeacherClassDetailPage() {
               </div>
             )}
 
-            <div style={{ textAlign: "right", marginTop: 20 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setSelectedStudent(null)}>
+            <div style={{ textAlign: "right", marginTop: 16 }}>
+              <button type="button" className="btn btn-secondary" style={{ padding: "6px 16px", fontSize: "0.85rem" }} onClick={() => setSelectedStudent(null)}>
                 Close
               </button>
             </div>
@@ -538,23 +513,23 @@ export default function TeacherClassDetailPage() {
 
       {/* Confirmation Warning Modal */}
       {confirmModal.open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="panel glass-panel" style={{ width: "min(90vw, 440px)", border: "2px solid #ef4444", textAlign: "center" }}>
-            <AlertTriangle size={48} color="#ef4444" style={{ margin: "0 auto 12px" }} />
-            <h3 style={{ color: "#ef4444", fontSize: "1.3rem", fontWeight: 800 }}>{confirmModal.title}</h3>
-            <p style={{ color: "#e2e8f0", fontSize: "0.9rem", margin: "12px 0 24px" }}>{confirmModal.message}</p>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setConfirmModal({ open: false, type: null, data: null })}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
+          <div className="panel glass-panel" style={{ width: "min(90vw, 420px)", border: "2px solid #ef4444", textAlign: "center", padding: 22 }}>
+            <AlertTriangle size={40} color="#ef4444" style={{ margin: "0 auto 10px" }} />
+            <h3 style={{ color: "#ef4444", fontSize: "1.15rem", fontWeight: 800, margin: "0 0 8px" }}>{confirmModal.title}</h3>
+            <p style={{ color: "#e2e8f0", fontSize: "0.85rem", margin: "8px 0 20px", lineHeight: 1.5 }}>{confirmModal.message}</p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button type="button" className="btn btn-secondary" style={{ padding: "8px 16px", fontSize: "0.85rem" }} onClick={() => setConfirmModal({ open: false, type: null, data: null })}>
                 Cancel
               </button>
               <button
                 type="button"
                 className="btn"
-                style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "#ffffff", fontWeight: 700 }}
+                style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "#ffffff", fontWeight: 700, padding: "8px 16px", fontSize: "0.85rem" }}
                 onClick={executeDeletion}
                 disabled={busy}
               >
-                Yes, Delete History
+                {confirmModal.type === "REMOVE_STUDENT" ? "Yes, Remove Student" : "Yes, Delete"}
               </button>
             </div>
           </div>
@@ -563,3 +538,4 @@ export default function TeacherClassDetailPage() {
     </div>
   );
 }
+

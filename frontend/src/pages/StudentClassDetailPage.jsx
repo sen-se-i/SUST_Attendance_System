@@ -99,36 +99,36 @@ export default function StudentClassDetailPage() {
 
       {/* Class Header Card */}
       {classInfo && (
-        <div className="panel glass-panel" style={{ border: "1px solid #00E6FF", marginBottom: 24 }}>
-          <span className="badge badge-success" style={{ marginBottom: 8, fontSize: "0.8rem" }}>
+        <div className="panel glass-panel" style={{ border: "1px solid #00E6FF", marginBottom: 18, padding: 18 }}>
+          <span className="badge badge-success" style={{ marginBottom: 6, fontSize: "0.75rem", fontFamily: "monospace" }}>
             CODE: {classInfo.code}
           </span>
-          <h1 style={{ fontSize: "1.8rem", fontWeight: 800, color: "#ffffff", margin: "4px 0" }}>
+          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", margin: "2px 0 4px" }}>
             {classInfo.subjectName || classInfo.subjectCode}
           </h1>
-          <p style={{ color: "#00E6FF", fontWeight: 600, fontSize: "0.95rem", margin: "4px 0 12px" }}>
+          <p style={{ color: "#00E6FF", fontWeight: 600, fontSize: "0.85rem", margin: "2px 0 8px" }}>
             Instructor: {classInfo.teacherName || "Faculty"} • {classInfo.subjectCode} ({classInfo.credits ? `${classInfo.credits} Credits` : ""})
           </p>
-          <div style={{ display: "flex", gap: 16, color: "#94a3b8", fontSize: "0.85rem" }}>
+          <div style={{ display: "flex", gap: 12, color: "#94a3b8", fontSize: "0.8rem", flexWrap: "wrap" }}>
             <span>Dept: {classInfo.department}</span>
-            <span>{classInfo.academicSession}</span>
-            <span>{classInfo.semester || "Semester N/A"}</span>
+            <span>Session: {classInfo.academicSession}</span>
+            <span>{classInfo.semester || ""}</span>
           </div>
         </div>
       )}
 
       {/* Live GPS Attendance Claim Banner */}
       {activeSession ? (
-        <div className="panel glass-panel" style={{ background: "rgba(0, 255, 136, 0.08)", border: "1px solid #00FF88", marginBottom: 24, padding: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+        <div className="panel glass-panel" style={{ background: "rgba(0, 255, 136, 0.08)", border: "1px solid #00FF88", marginBottom: 18, padding: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <span className="badge badge-success" style={{ marginBottom: 6 }}>
+              <span className="badge badge-success" style={{ marginBottom: 4, fontSize: "0.72rem" }}>
                 LIVE GPS SESSION ACTIVE
               </span>
-              <h3 style={{ color: "#ffffff", fontSize: "1.2rem", fontWeight: 800, margin: "4px 0" }}>
+              <h3 style={{ color: "#ffffff", fontSize: "1.1rem", fontWeight: 800, margin: "2px 0" }}>
                 Teacher is taking attendance now!
               </h3>
-              <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>
+              <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: 0 }}>
                 Radius: {activeSession.radiusMeters}m • Ensure GPS is turned ON.
               </p>
             </div>
@@ -137,49 +137,49 @@ export default function StudentClassDetailPage() {
               className="btn btn-primary"
               onClick={handleClaimAttendance}
               disabled={claiming}
-              style={{ background: "linear-gradient(135deg, #00FF88, #00E6FF)", color: "#000", fontWeight: 900, padding: "12px 24px", fontSize: "1rem" }}
+              style={{ background: "linear-gradient(135deg, #00FF88, #00E6FF)", color: "#000", fontWeight: 900, padding: "10px 18px", fontSize: "0.9rem" }}
             >
-              <MapPin size={18} /> {claiming ? "Verifying GPS..." : "Submit Attendance"}
+              <MapPin size={16} /> {claiming ? "Verifying GPS..." : "Submit Attendance"}
             </button>
           </div>
         </div>
       ) : (
-        <div className="panel glass-panel" style={{ border: "1px solid #213042", marginBottom: 24, padding: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>No active GPS session at this moment.</span>
-            <button type="button" className="btn btn-secondary" onClick={loadData} style={{ fontSize: "0.8rem" }}>
-              <RefreshCw size={14} /> Check Live Session
+        <div className="panel glass-panel" style={{ border: "1px solid #213042", marginBottom: 18, padding: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <span style={{ color: "#94a3b8", fontSize: "0.82rem" }}>No active GPS session at this moment.</span>
+            <button type="button" className="btn btn-secondary" onClick={loadData} style={{ fontSize: "0.78rem", padding: "4px 10px" }}>
+              <RefreshCw size={13} /> Check Live Session
             </button>
           </div>
         </div>
       )}
 
       {/* Attendance Summary Stats Box */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
-        <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 16 }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.8rem", display: "block" }}>TOTAL SESSIONS CONDUCTED</span>
-          <span style={{ color: "#ffffff", fontSize: "1.8rem", fontWeight: 900, marginTop: 4, display: "block" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 18 }}>
+        <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 12 }}>
+          <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>TOTAL CONDUCTED</span>
+          <span style={{ color: "#ffffff", fontSize: "1.35rem", fontWeight: 900, marginTop: 2, display: "block" }}>
             {myRecords.length}
           </span>
         </div>
-        <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 16 }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.8rem", display: "block" }}>TOTAL ATTENDED</span>
-          <span style={{ color: "#00FF88", fontSize: "1.8rem", fontWeight: 900, marginTop: 4, display: "block" }}>
+        <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 12 }}>
+          <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>TOTAL ATTENDED</span>
+          <span style={{ color: "#00FF88", fontSize: "1.35rem", fontWeight: 900, marginTop: 2, display: "block" }}>
             {totalMyRecords}
           </span>
         </div>
-        <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 16 }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.8rem", display: "block" }}>ATTENDANCE RATE</span>
-          <span style={{ color: "#00E6FF", fontSize: "1.8rem", fontWeight: 900, marginTop: 4, display: "block" }}>
+        <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 12 }}>
+          <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>ATTENDANCE RATE</span>
+          <span style={{ color: "#00E6FF", fontSize: "1.35rem", fontWeight: 900, marginTop: 2, display: "block" }}>
             {myRecords.length > 0 ? "100%" : "0%"}
           </span>
         </div>
       </div>
 
       {/* Class Attendance Records Table */}
-      <div className="panel glass-panel" style={{ border: "1px solid #213042" }}>
-        <h2>
-          <Calendar size={20} color="#00E6FF" /> Class Attendance Log
+      <div className="panel glass-panel" style={{ border: "1px solid #213042", padding: 18 }}>
+        <h2 style={{ fontSize: "1.1rem", marginBottom: 12 }}>
+          <Calendar size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Class Attendance Log
         </h2>
 
         {myRecords.length === 0 ? (
