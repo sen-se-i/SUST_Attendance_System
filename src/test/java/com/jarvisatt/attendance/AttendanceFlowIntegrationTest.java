@@ -5,7 +5,6 @@ import com.jarvisatt.attendance.dto.AttendanceDtos.ClaimAttendanceRequest;
 import com.jarvisatt.attendance.dto.AttendanceDtos.VerifyScanRequest;
 import com.jarvisatt.attendance.dto.AuthDtos.*;
 import com.jarvisatt.attendance.dto.ClassDtos.CreateClassRequest;
-import com.jarvisatt.attendance.dto.ClassDtos.JoinClassRequest;
 import com.jarvisatt.attendance.dto.ClassDtos.RosterRequest;
 import com.jarvisatt.attendance.dto.SessionDtos.StartSessionRequest;
 import com.jarvisatt.attendance.exception.ApiException;

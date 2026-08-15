@@ -31,6 +31,9 @@ public final class ClassDtos {
 
     public record RosterRequest(java.util.List<@NotBlank String> registrationNos) {}
     public record JoinClassDirectRequest(String classCode, String code) {
+        public JoinClassDirectRequest(String classCode) {
+            this(classCode, null);
+        }
         public String effectiveCode() {
             if (classCode != null && !classCode.isBlank()) return classCode.trim();
             if (code != null && !code.isBlank()) return code.trim();
