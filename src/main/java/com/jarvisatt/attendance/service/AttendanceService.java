@@ -61,11 +61,20 @@ public class AttendanceService {
             throw new ApiException(HttpStatus.GONE, "Attendance session expired (150s limit reached)");
         }
 
-        if (!rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Registration number not found in class roster allowlist");
+        boolean isEnrolled = enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE);
+        boolean inRoster = rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo);
+        if (!isEnrolled && !inRoster) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class (Registration: " + registrationNo + ")");
         }
-        if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class");
+        if (isEnrolled && !inRoster) {
+            rosterRepository.save(new ClassRosterEntry(session.getClassEntity().getId(), registrationNo));
+        }
+        if (!isEnrolled && inRoster) {
+            Enrollment enrollment = new Enrollment();
+            enrollment.setClassEntity(session.getClassEntity());
+            enrollment.setStudent(student);
+            enrollment.setStatus(EnrollmentStatus.ACTIVE);
+            enrollmentRepository.save(enrollment);
         }
         if (attendanceRecordRepository.existsBySessionIdAndRegistrationNo(session.getId(), registrationNo)) {
             throw new ApiException(HttpStatus.CONFLICT, "Attendance already registered for this session");
@@ -131,11 +140,20 @@ public class AttendanceService {
         }
         ClassSession session = classSessionRepository.findById(payload.sessionId())
                 .orElseThrow(() -> new ApiException(HttpStatus.GONE, "Session not found"));
-        if (!rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Not enrolled in this class roster");
+        boolean isEnrolled = enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE);
+        boolean inRoster = rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo);
+        if (!isEnrolled && !inRoster) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class (Registration: " + registrationNo + ")");
         }
-        if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class");
+        if (isEnrolled && !inRoster) {
+            rosterRepository.save(new ClassRosterEntry(session.getClassEntity().getId(), registrationNo));
+        }
+        if (!isEnrolled && inRoster) {
+            Enrollment enrollment = new Enrollment();
+            enrollment.setClassEntity(session.getClassEntity());
+            enrollment.setStudent(student);
+            enrollment.setStatus(EnrollmentStatus.ACTIVE);
+            enrollmentRepository.save(enrollment);
         }
         if (attendanceRecordRepository.existsBySessionIdAndRegistrationNo(session.getId(), registrationNo)) {
             throw new ApiException(HttpStatus.CONFLICT, "Already marked present");

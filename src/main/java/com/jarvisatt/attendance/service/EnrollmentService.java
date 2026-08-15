@@ -38,6 +38,15 @@ public class EnrollmentService {
         enrollment.setStudent(student);
         enrollment.setStatus(EnrollmentStatus.ACTIVE);
         enrollmentRepository.save(enrollment);
+
+        // Ensure student registration number is also present in class roster
+        if (student.getRegistrationNo() != null && !student.getRegistrationNo().isBlank()) {
+            String cleanReg = student.getRegistrationNo().trim();
+            if (!rosterRepository.existsByClassIdAndRegistrationNo(classEntity.getId(), cleanReg)) {
+                rosterRepository.save(new ClassRosterEntry(classEntity.getId(), cleanReg));
+            }
+        }
+
         return new JoinClassResponse(enrollment.getId(), classEntity.getId(), enrollment.getStatus().name());
     }
 
