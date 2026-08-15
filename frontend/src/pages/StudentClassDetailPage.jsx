@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, MapPin, CheckCircle2, XCircle, Calendar, RefreshCw, S
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/ToastContext";
 import { useAuth } from "../lib/AuthContext";
+import { captureCalibratedLocation } from "../lib/location";
 
 export default function StudentClassDetailPage() {
   const { classId } = useParams();
@@ -50,12 +51,10 @@ export default function StudentClassDetailPage() {
     if (!activeSession) return;
     setClaiming(true);
     try {
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        });
-      });
+      // Use the same calibrated GPS loop as the teacher capture.
+      // It retries up to 6 times and rejects if accuracy > session radius.
+      const radiusMeters = activeSession.radiusMeters || 20;
+      const location = await captureCalibratedLocation(radiusMeters);
 
       let installId = localStorage.getItem("jarvisatt.deviceInstallId");
       if (!installId) {
@@ -67,10 +66,10 @@ export default function StudentClassDetailPage() {
         method: "POST",
         body: JSON.stringify({
           sessionId: activeSession.sessionId,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracyMeters: pos.coords.accuracy,
-          capturedAt: new Date(pos.timestamp).toISOString(),
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracyMeters: location.accuracyMeters,
+          capturedAt: location.capturedAt,
           deviceInstallId: installId,
         }),
       });

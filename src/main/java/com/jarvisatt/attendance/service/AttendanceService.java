@@ -201,8 +201,8 @@ public class AttendanceService {
     }
 
     private static double requireValidAccuracy(Double accuracyMeters, String label) {
-        if (accuracyMeters == null || !Double.isFinite(accuracyMeters) || accuracyMeters <= 0.0 || accuracyMeters > 100.0) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between 0 and 100 meters");
+        if (accuracyMeters == null || !Double.isFinite(accuracyMeters) || accuracyMeters <= 0.0 || accuracyMeters > 40.0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between 0 and 40 meters. Enable High Accuracy GPS and try again.");
         }
         return accuracyMeters;
     }
@@ -215,15 +215,33 @@ public class AttendanceService {
     }
 
     private static void requireCalibratedInsideRadius(double distanceMeters, double accuracyMeters, double radiusMeters) {
-        if (accuracyMeters > 80.0) {
+        // ── Step 1: GPS quality gate ──────────────────────────────────────────────
+        // If accuracy is so bad that the GPS circle is larger than the entire geofence
+        // zone itself (2x), the reading is essentially useless — we can't trust the center.
+        // Already hard-capped at 40m upstream by requireValidAccuracy.
+        double accuracyCeiling = Math.min(40.0, radiusMeters * 2.0);
+        if (accuracyMeters > accuracyCeiling) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    String.format("GPS signal is too weak (+/-%.1fm). Please turn on High Accuracy Location / Wi-Fi scanning and try again.", accuracyMeters));
+                    String.format(
+                            "GPS accuracy (+/-%.1fm) is too weak for this %.1fm session. " +
+                            "Enable High Accuracy mode (Wi-Fi + Mobile Data ON) and stand still, then retry.",
+                            accuracyMeters, radiusMeters));
         }
-        // Allow classroom radius with indoor GPS tolerance margin
-        double allowedThreshold = radiusMeters + Math.min(accuracyMeters, 15.0);
-        if (distanceMeters > allowedThreshold) {
+
+        // ── Step 2: Center-inside check ───────────────────────────────────────────
+        // The reported GPS center must be inside the geofence zone.
+        // Accuracy is already quality-gated above, so the center is the best
+        // available estimate of where the student actually is.
+        //
+        // Why NOT (distance + accuracy <= radius)?
+        //   That conservative formula rejects boundary students even when they are
+        //   clearly inside the room — unacceptable false negatives for last-row seats.
+        if (distanceMeters > radiusMeters) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    String.format("Location out of range! Distance: %.1fm (Allowed radius: %.1fm, GPS accuracy: +/-%.1fm). Please move closer.", distanceMeters, radiusMeters, accuracyMeters));
+                    String.format(
+                            "Location out of range! You are %.1fm from the teacher, but must be within %.1fm. " +
+                            "Please move closer. (GPS accuracy: +/-%.1fm)",
+                            distanceMeters, radiusMeters, accuracyMeters));
         }
     }
 

@@ -117,8 +117,8 @@ public class SessionLifecycleService {
     }
 
     private static double requireValidAccuracy(Double accuracyMeters, String label) {
-        if (accuracyMeters == null || !Double.isFinite(accuracyMeters) || accuracyMeters <= 0.0 || accuracyMeters > 100.0) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between 0 and 100 meters");
+        if (accuracyMeters == null || !Double.isFinite(accuracyMeters) || accuracyMeters <= 0.0 || accuracyMeters > 40.0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between 0 and 40 meters. Enable High Accuracy GPS and try again.");
         }
         return accuracyMeters;
     }
