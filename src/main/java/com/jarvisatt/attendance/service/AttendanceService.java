@@ -82,11 +82,6 @@ public class AttendanceService {
         double distanceMeters = calculateHaversineDistance(teacherLat, teacherLon, studentLat, studentLon);
         requireCalibratedInsideRadius(distanceMeters, studentAccuracyMeters, maxRadius);
 
-        if (distanceMeters > maxRadius) {
-            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    String.format("Location out of range! Distance from classroom: %.1fm (Allowed radius: %.1fm). Please move closer.", distanceMeters, maxRadius));
-        }
-
         AttendanceRecord record = new AttendanceRecord();
         record.setSession(session);
         record.setClassEntity(session.getClassEntity());
@@ -157,11 +152,6 @@ public class AttendanceService {
         double distanceMeters = calculateHaversineDistance(teacherLat, teacherLon, studentLat, studentLon);
         requireCalibratedInsideRadius(distanceMeters, studentAccuracyMeters, maxRadius);
 
-        if (distanceMeters > maxRadius) {
-            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    String.format("Location out of range! Distance from classroom: %.1fm (Allowed radius: %.1fm). Please move closer.", distanceMeters, maxRadius));
-        }
-
         AttendanceRecord record = new AttendanceRecord();
         record.setSession(session);
         record.setClassEntity(session.getClassEntity());
@@ -225,13 +215,15 @@ public class AttendanceService {
     }
 
     private static void requireCalibratedInsideRadius(double distanceMeters, double accuracyMeters, double radiusMeters) {
-        if (accuracyMeters > radiusMeters) {
+        if (accuracyMeters > 80.0) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    String.format("GPS accuracy is %.1fm, too weak for a %.1fm attendance radius. Wait for a stronger GPS fix and try again.", accuracyMeters, radiusMeters));
+                    String.format("GPS signal is too weak (+/-%.1fm). Please turn on High Accuracy Location / Wi-Fi scanning and try again.", accuracyMeters));
         }
-        if (distanceMeters + accuracyMeters > radiusMeters) {
+        // Allow classroom radius with indoor GPS tolerance margin
+        double allowedThreshold = radiusMeters + Math.min(accuracyMeters, 15.0);
+        if (distanceMeters > allowedThreshold) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    String.format("Location cannot be verified inside the classroom radius. Distance: %.1fm, GPS accuracy: +/-%.1fm, allowed radius: %.1fm.", distanceMeters, accuracyMeters, radiusMeters));
+                    String.format("Location out of range! Distance: %.1fm (Allowed radius: %.1fm, GPS accuracy: +/-%.1fm). Please move closer.", distanceMeters, radiusMeters, accuracyMeters));
         }
     }
 
