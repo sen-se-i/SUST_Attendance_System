@@ -29,19 +29,20 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Initializing demo seed data...");
 
         // 1. Seed Teacher
-        User teacher = userRepository.findByEmail("faria24mahmood@gmail.com")
-                .orElseGet(() -> userRepository.findByEmail("teacher@example.com")
+        User teacher = userRepository.findByEmail("teacher@example.com")
                 .orElseGet(() -> {
                     User u = new User();
-                    u.setEmail("faria24mahmood@gmail.com");
-                    u.setPasswordHash(passwordEncoder.encode("123456"));
+                    u.setEmail("teacher@example.com");
+                    u.setPasswordHash(passwordEncoder.encode("password"));
                     u.setRole(Role.ADMIN);
                     return userRepository.save(u);
-                }));
+                });
 
-        // Always ensure faria24mahmood@gmail.com exists
+        // 2. Seed Student (faria24mahmood@gmail.com)
         userRepository.findByEmail("faria24mahmood@gmail.com").ifPresentOrElse(
             u -> {
+                u.setRole(Role.STUDENT);
+                u.setRegistrationNo("2023831055");
                 u.setPasswordHash(passwordEncoder.encode("123456"));
                 userRepository.save(u);
             },
@@ -49,12 +50,13 @@ public class DataInitializer implements CommandLineRunner {
                 User u = new User();
                 u.setEmail("faria24mahmood@gmail.com");
                 u.setPasswordHash(passwordEncoder.encode("123456"));
-                u.setRole(Role.ADMIN);
+                u.setRole(Role.STUDENT);
+                u.setRegistrationNo("2023831055");
                 userRepository.save(u);
             }
         );
 
-        // 2. Seed Student (ch.wixard@student.sust.edu)
+        // 3. Seed Student (ch.wixard@student.sust.edu)
         User student = userRepository.findByEmail("ch.wixard@student.sust.edu")
                 .orElseGet(() -> {
                     User u = new User();
