@@ -20,6 +20,19 @@ public class DataSourceConfig {
             dbUrl = System.getenv("DATABASE_URL");
         }
 
+        String dbHost = System.getenv("DB_HOST");
+        String dbName = System.getenv("DB_NAME");
+        String dbUser = System.getenv("DB_USER");
+        String dbPass = System.getenv("DB_PASSWORD");
+        String dbPort = System.getenv("DB_PORT");
+        if (dbPort == null || dbPort.isBlank()) {
+            dbPort = "5432";
+        }
+
+        if ((dbUrl == null || dbUrl.isBlank()) && dbHost != null && !dbHost.isBlank() && dbName != null && !dbName.isBlank()) {
+            dbUrl = "jdbc:postgresql://" + dbHost.trim() + ":" + dbPort.trim() + "/" + dbName.trim();
+        }
+
         HikariConfig config = new HikariConfig();
 
         if (dbUrl != null && !dbUrl.isBlank()) {
@@ -42,10 +55,9 @@ public class DataSourceConfig {
                 }
             } else {
                 config.setJdbcUrl(dbUrl);
-                String user = System.getenv("DB_USER");
-                String pass = System.getenv("DB_PASSWORD");
-                if (user != null) config.setUsername(user);
-                if (pass != null) config.setPassword(pass);
+                if (dbUser != null && !dbUser.isBlank()) config.setUsername(dbUser.trim());
+                if (dbPass != null && !dbPass.isBlank()) config.setPassword(dbPass.trim());
+                config.setDriverClassName("org.postgresql.Driver");
             }
         } else {
             // Local H2 fallback with persistent file database
