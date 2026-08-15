@@ -106,6 +106,21 @@ public class AuthService {
         deviceRepository.deleteByStudentId(user.getId());
     }
 
+    private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceRecordRepository attendanceRecordRepository;
+
+    @Transactional
+    public void deleteUserByEmailOrRegistrationNo(String target) {
+        User user = userRepository.findByEmail(target.trim().toLowerCase())
+                .or(() -> userRepository.findByRegistrationNo(target.trim()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User account not found for: " + target));
+
+        deviceRepository.deleteByStudentId(user.getId());
+        enrollmentRepository.deleteByStudentId(user.getId());
+        attendanceRecordRepository.deleteByStudentId(user.getId());
+        userRepository.delete(user);
+    }
+
     private AuthResponse authResponse(User user) {
         String token = jwtService.issue(UserPrincipal.from(user));
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getRegistrationNo());
