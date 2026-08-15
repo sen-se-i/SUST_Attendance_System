@@ -46,7 +46,7 @@ public class EnrollmentService {
                 .stream()
                 .map(e -> new EnrolledStudentResponse(
                         e.getStudent().getRegistrationNo(),
-                        e.getStudent().getName(),
+                        e.getStudent().getEmail(),
                         e.getStatus().name(),
                         e.getJoinedAt()
                 ))

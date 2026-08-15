@@ -41,9 +41,14 @@ public class RosterService {
         classService.ownedClass(classId, teacher);
         Set<String> joinedRegistrationNos = enrollmentRepository.findByClassEntityIdAndStatus(classId, EnrollmentStatus.ACTIVE).stream()
                 .map(enrollment -> enrollment.getStudent().getRegistrationNo())
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toSet());
-        return rosterRepository.findByClassIdOrderByRegistrationNo(classId).stream()
-                .map(entry -> new RosterEntryResponse(entry.getRegistrationNo(), joinedRegistrationNos.contains(entry.getRegistrationNo())))
+
+        Set<String> allRegs = new java.util.LinkedHashSet<>(joinedRegistrationNos);
+        rosterRepository.findByClassIdOrderByRegistrationNo(classId).forEach(entry -> allRegs.add(entry.getRegistrationNo()));
+
+        return allRegs.stream()
+                .map(reg -> new RosterEntryResponse(reg, joinedRegistrationNos.contains(reg)))
                 .toList();
     }
 }
