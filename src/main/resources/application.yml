@@ -12,6 +12,9 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+    validate-on-migrate: false
+    baseline-on-migrate: true
+    out-of-order: true
   mail:
     host: localhost
     port: 1025
