@@ -50,6 +50,6 @@ public final class SessionDtos {
             OffsetDateTime startedAt,
             OffsetDateTime endedAt,
             Double radiusMeters,
-            int attendanceCount
+            long attendanceCount
     ) {}
 }

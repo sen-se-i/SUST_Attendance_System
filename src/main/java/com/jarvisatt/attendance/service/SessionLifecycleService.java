@@ -89,7 +89,7 @@ public class SessionLifecycleService {
         classService.ownedClass(classId, teacher); // ownership check
         return classSessionRepository.findByClassEntityIdOrderByStartedAtDesc(classId).stream()
                 .map(s -> {
-                    int count = attendanceRecordRepository.countBySessionId(s.getId());
+                    long count = attendanceRecordRepository.countBySessionId(s.getId());
                     return new SessionHistoryResponse(
                             s.getId(),
                             s.getStatus().name(),
