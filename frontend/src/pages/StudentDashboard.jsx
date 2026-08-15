@@ -1,76 +1,46 @@
 import { useCallback, useEffect, useState } from "react";
-import { CircleCheckBig, GraduationCap, School, MapPin, Navigation, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, RefreshCw, BookOpen, ChevronRight, Clock, User, CheckCircle2 } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/ToastContext";
 import { useAuth } from "../lib/AuthContext";
-import { getDeviceInstallId } from "../lib/deviceId";
-import { AttendanceTable } from "../components/AttendanceTable";
-import { captureCalibratedLocation } from "../lib/location";
-
-const initialJoinForm = { classCode: "", registrationNo: "" };
 
 export default function StudentDashboard() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const notify = useToast();
-  const [joinForm, setJoinForm] = useState(() => ({ ...initialJoinForm, registrationNo: user?.registrationNo || "" }));
-  const [deviceInstallId] = useState(getDeviceInstallId);
-  const [attendance, setAttendance] = useState([]);
-  const [joinedClasses, setJoinedClasses] = useState([]);
-  const [selectedClassId, setSelectedClassId] = useState("");
-  const [activeSession, setActiveSession] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [claiming, setClaiming] = useState(false);
-  const [lastClaimResult, setLastClaimResult] = useState(null);
+  const { user } = useAuth();
 
-  const loadAttendance = useCallback(async () => {
+  const [classes, setClasses] = useState([]);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [classCode, setClassCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const loadClasses = useCallback(async () => {
     try {
-      setAttendance(await api("/api/attendance/me"));
+      setClasses(await api("/api/classes/enrolled"));
     } catch (error) {
-      notify(error instanceof ApiError ? error.message : "Failed to load attendance", "danger");
+      notify(error instanceof ApiError ? error.message : "Failed to load enrolled classes", "danger");
     }
   }, [notify]);
 
-  const loadJoinedClasses = useCallback(async () => {
-    try {
-      const classes = await api("/api/classes/enrolled");
-      setJoinedClasses(classes);
-      if (classes.length > 0 && !selectedClassId) {
-        setSelectedClassId(classes[0].id);
-      }
-    } catch (error) {
-      notify(error instanceof ApiError ? error.message : "Failed to load joined classes", "danger");
-    }
-  }, [notify, selectedClassId]);
-
-  const checkActiveSession = useCallback(async () => {
-    if (!selectedClassId) {
-      setActiveSession(null);
-      return;
-    }
-    try {
-      const session = await api(`/api/sessions/active?classId=${selectedClassId}`);
-      setActiveSession(session);
-    } catch (error) {
-      setActiveSession(null);
-    }
-  }, [selectedClassId]);
-
   useEffect(() => {
-    loadAttendance();
-    loadJoinedClasses();
-  }, [loadAttendance, loadJoinedClasses]);
+    loadClasses();
+  }, [loadClasses]);
 
-  useEffect(() => {
-    checkActiveSession();
-  }, [checkActiveSession]);
+  async function handleJoinClass(e) {
+    e.preventDefault();
+    if (!classCode.trim()) return;
 
-  async function handleJoin(event) {
-    event.preventDefault();
     setBusy(true);
     try {
-      await api("/api/classes/join", { method: "POST", body: JSON.stringify(joinForm) });
-      notify("Class joined.", "success");
-      await loadJoinedClasses();
+      await api("/api/classes/join", {
+        method: "POST",
+        body: JSON.stringify({ classCode: classCode.trim() }),
+      });
+      notify("Enrolled in class successfully!", "success");
+      setShowJoinModal(false);
+      setClassCode("");
+      await loadClasses();
     } catch (error) {
       notify(error instanceof ApiError ? error.message : "Failed to join class", "danger");
     } finally {
@@ -78,143 +48,147 @@ export default function StudentDashboard() {
     }
   }
 
-  async function handleClaimAttendance() {
-    if (!activeSession) return;
-    setClaiming(true);
-
-    try {
-      const location = await captureCalibratedLocation(activeSession.radiusMeters || 20);
-      const result = await api("/api/attendance/claim", {
-        method: "POST",
-        body: JSON.stringify({
-          sessionId: activeSession.sessionId,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          accuracyMeters: location.accuracyMeters,
-          capturedAt: location.capturedAt,
-          deviceInstallId,
-        }),
-      });
-      setLastClaimResult(result);
-      notify(`Attendance Registered! (${result.distanceMeters?.toFixed(1)}m from teacher, +/-${result.accuracyMeters?.toFixed(1)}m accuracy)`, "success");
-      await loadAttendance();
-    } catch (error) {
-      notify(error instanceof ApiError ? error.message : `Could not verify GPS location. ${error?.message || "Please enable location permission and try again."}`, "danger");
-    } finally {
-      setClaiming(false);
-    }
-  }
-
-  const isAlreadyAttended = activeSession && attendance.some((r) => r.sessionId === activeSession.sessionId);
-
   return (
-    <div className="student-grid">
-      <form className="panel glass-panel" onSubmit={handleJoin}>
-        <h2>
-          <School size={18} /> Join Class
-        </h2>
-        <div className="form-group">
-          <label className="form-label" htmlFor="classCode">
-            Class Code
-          </label>
-          <input
-            id="classCode"
-            className="form-input"
-            maxLength={6}
-            required
-            placeholder="8K2P0X"
-            value={joinForm.classCode}
-            onChange={(e) => setJoinForm((f) => ({ ...f, classCode: e.target.value.toUpperCase() }))}
-          />
+    <div style={{ paddingBottom: 100 }}>
+      {/* Header Bar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: "1.8rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>My Enrolled Classes</h1>
+          <p style={{ color: "#94a3b8", fontSize: "0.9rem", margin: "4px 0 0" }}>
+            Select a class to view attendance records and live GPS sessions.
+          </p>
         </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="registrationNo">
-            Registration No
-          </label>
-          <input
-            id="registrationNo"
-            className="form-input"
-            required
-            value={joinForm.registrationNo}
-            onChange={(e) => setJoinForm((f) => ({ ...f, registrationNo: e.target.value }))}
-          />
-        </div>
-        <button type="submit" className="btn btn-primary" disabled={busy}>
-          Join
+        <button type="button" className="btn btn-secondary" onClick={loadClasses}>
+          <RefreshCw size={16} /> Refresh
         </button>
-      </form>
-
-      <div className="panel glass-panel">
-        <div className="toolbar">
-          <h2>
-            <GraduationCap size={18} /> Joined Classes
-          </h2>
-          <button type="button" className="btn btn-secondary" onClick={checkActiveSession}>
-            <RefreshCw size={14} /> Check Active Session
-          </button>
-        </div>
-        {joinedClasses.length === 0 ? (
-          <p className="empty-state">You haven't joined any classes yet.</p>
-        ) : (
-          <div className="list">
-            {joinedClasses.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`list-item joined-class-item ${selectedClassId === item.id ? "active" : ""}`}
-                onClick={() => setSelectedClassId(item.id)}
-              >
-                {item.subjectCode} · {item.department}
-                <span className="subtitle"> — code {item.code}</span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
-      <div className="panel glass-panel scanner-panel" style={{ border: "1px solid rgba(0, 230, 255, 0.35)", boxShadow: "0 0 20px rgba(0, 230, 255, 0.08)" }}>
-        <h2>
-          <Navigation size={18} color="#00E6FF" /> GPS Attendance Verification
-        </h2>
+      {/* Enrolled Classes Grid */}
+      {classes.length === 0 ? (
+        <div className="panel glass-panel" style={{ textAlign: "center", padding: "48px 24px", border: "1px dashed #213042" }}>
+          <BookOpen size={48} color="#3B4D61" style={{ marginBottom: 12 }} />
+          <h3 style={{ color: "#ffffff" }}>No Classes Enrolled Yet</h3>
+          <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: 20 }}>
+            Click the "+ JOIN CLASS" button at the bottom to join your first class with a Class Code.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+          {classes.map((item) => (
+            <div
+              key={item.id}
+              className="panel glass-panel"
+              style={{
+                border: "1px solid #213042",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+              onClick={() => navigate(`/student/class/${item.id}`)}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <span className="badge badge-success" style={{ fontSize: "0.75rem", fontFamily: "monospace" }}>
+                  CODE: {item.code}
+                </span>
+                {item.credits && (
+                  <span style={{ color: "#00FF88", fontWeight: 700, fontSize: "0.85rem" }}>
+                    {item.credits} Credits
+                  </span>
+                )}
+              </div>
 
-        {activeSession ? (
-          <div style={{ textAlign: "center", padding: "16px", background: "rgba(10, 16, 26, 0.8)", border: "1px solid #213042", borderRadius: "12px", margin: "16px 0" }}>
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", color: "#00FF88", fontWeight: "bold" }}>
-              <MapPin size={20} color="#00E6FF" /> SESSION ACTIVE ({activeSession.radiusMeters || 20}m Radius)
+              {/* Subject Name (Large) */}
+              <h3 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+                {item.subjectName || item.subjectCode}
+              </h3>
+
+              {/* Teacher Name */}
+              <p style={{ color: "#00E6FF", fontWeight: 600, fontSize: "0.9rem", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                <User size={14} /> Teacher: {item.teacherName || "Faculty"}
+              </p>
+
+              {/* Subject Code - Credit */}
+              <p style={{ color: "#cbd5e1", fontSize: "0.85rem", margin: "0 0 12px" }}>
+                {item.subjectCode} • {item.credits ? `${item.credits} Credits` : "3.0 Credits"}
+              </p>
+
+              {/* Last Session Date */}
+              <div style={{ background: "rgba(0, 230, 255, 0.06)", border: "1px solid #213042", padding: "8px 12px", borderRadius: 8, fontSize: "0.8rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
+                <Clock size={14} color="#00E6FF" />
+                <span>
+                  Last Session: {item.lastSessionAt ? new Date(item.lastSessionAt).toLocaleString() : "No sessions conducted yet"}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #213042", paddingTop: 12, marginTop: 14, fontSize: "0.8rem", color: "#94a3b8" }}>
+                <span>{item.department}</span>
+                <span style={{ color: "#00E6FF", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  View Attendance Log <ChevronRight size={14} />
+                </span>
+              </div>
             </div>
-            <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "8px 0 16px" }}>
-              Ensure your phone location / GPS is turned on to mark present.
+          ))}
+        </div>
+      )}
+
+      {/* Floating Bottom "+ JOIN CLASS" Button */}
+      <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9000 }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{
+            padding: "14px 28px",
+            fontSize: "1.05rem",
+            fontWeight: 800,
+            borderRadius: 30,
+            boxShadow: "0 8px 32px rgba(0, 230, 255, 0.4)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "linear-gradient(135deg, #00E6FF, #00FF88)",
+            color: "#000000",
+          }}
+          onClick={() => setShowJoinModal(true)}
+        >
+          <Plus size={20} /> + JOIN CLASS
+        </button>
+      </div>
+
+      {/* Join Class Modal */}
+      {showJoinModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="panel glass-panel" style={{ width: "min(95vw, 440px)", border: "1px solid #00E6FF" }}>
+            <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", marginBottom: 8 }}>Join New Class</h2>
+            <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: 16 }}>
+              Enter the 6-character Class Code provided by your teacher. Your registration number ({user.registrationNo || "profile ID"}) will automatically be registered.
             </p>
 
-            {isAlreadyAttended ? (
-              <div className="badge badge-success" style={{ padding: "10px 16px", fontSize: "0.95rem" }}>
-                <CircleCheckBig size={18} /> Attendance Verified & Recorded!
+            <form onSubmit={handleJoinClass}>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label className="form-label">Class Code</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. SWE301 or Class Code"
+                  value={classCode}
+                  onChange={(e) => setClassCode(e.target.value.toUpperCase())}
+                  style={{ textTransform: "uppercase", letterSpacing: "2px", fontWeight: 700, fontSize: "1.1rem" }}
+                  maxLength={20}
+                  required
+                />
               </div>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ width: "100%", padding: "14px", fontSize: "1.05rem" }}
-                onClick={handleClaimAttendance}
-                disabled={claiming}
-              >
-                {claiming ? "Verifying GPS Location..." : "Give Attendance (GPS)"}
-              </button>
-            )}
-          </div>
-        ) : (
-          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
-            <MapPin size={36} color="#3B4D61" style={{ marginBottom: "8px" }} />
-            <p style={{ fontWeight: "bold", color: "#FFFFFF" }}>No Active Session</p>
-            <p style={{ fontSize: "0.85rem" }}>Select a class above and check when your teacher starts an attendance session.</p>
-          </div>
-        )}
-      </div>
 
-      <div className="panel glass-panel">
-        <h2>My Attendance</h2>
-        <AttendanceTable rows={attendance} emptyLabel="No attendance records yet." showSubject />
-      </div>
+              <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowJoinModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={busy || !classCode.trim()}>
+                  Join Class
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

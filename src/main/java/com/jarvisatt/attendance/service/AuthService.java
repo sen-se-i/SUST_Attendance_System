@@ -89,6 +89,23 @@ public class AuthService {
         return authResponse(user);
     }
 
+    @Transactional(readOnly = true)
+    public UserProfileResponse profile(UserPrincipal principal) {
+        User user = userRepository.findById(principal.id()).orElseThrow();
+        String dept = user.getRole() == Role.STUDENT ? "Software Engineering" : "Software Engineering / Faculty";
+        return new UserProfileResponse(user.getId(), user.getEmail(), user.getRole(), user.getRegistrationNo(), dept);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByRegistrationNo(request.registrationNo().trim())
+                .or(() -> userRepository.findByEmail(request.registrationNo().trim().toLowerCase()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Account not found for: " + request.registrationNo()));
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        deviceRepository.deleteByStudentId(user.getId());
+    }
+
     private AuthResponse authResponse(User user) {
         String token = jwtService.issue(UserPrincipal.from(user));
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getRegistrationNo());

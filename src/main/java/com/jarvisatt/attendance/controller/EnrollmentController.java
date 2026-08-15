@@ -17,7 +17,10 @@ public class EnrollmentController {
 
     @PostMapping("/join")
     @PreAuthorize("hasRole('STUDENT')")
-    JoinClassResponse join(@Valid @RequestBody JoinClassRequest request, @AuthenticationPrincipal UserPrincipal principal) {
-        return enrollmentService.join(request, principal);
+    JoinClassResponse joinDirect(@RequestBody JoinClassDirectRequest request, @AuthenticationPrincipal UserPrincipal principal) {
+        if (request == null || request.effectiveCode().isBlank()) {
+            throw new com.jarvisatt.attendance.exception.ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "Class Code is required");
+        }
+        return enrollmentService.joinDirect(request, principal);
     }
 }

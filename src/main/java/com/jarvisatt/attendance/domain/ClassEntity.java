@@ -30,6 +30,15 @@ public class ClassEntity {
     @Column(name = "subject_code", nullable = false)
     private String subjectCode;
 
+    @Column(name = "semester")
+    private String semester;
+
+    @Column(name = "subject_name")
+    private String subjectName;
+
+    @Column(name = "credits")
+    private Double credits;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "teacher_id")
     private User teacher;

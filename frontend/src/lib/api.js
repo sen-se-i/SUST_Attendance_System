@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config";
+import { getApiBaseUrl } from "./config";
 
 const TOKEN_KEY = "jarvisatt.token";
 
@@ -21,14 +21,17 @@ export async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (!(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
   const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token && !path.startsWith("/api/auth/login") && !path.startsWith("/api/auth/register") && !path.startsWith("/api/auth/reset-password")) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   let response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, signal: controller.signal });
+    const baseUrl = getApiBaseUrl();
+    response = await fetch(`${baseUrl}${path}`, { ...options, headers, signal: controller.signal });
   } catch (error) {
     if (error.name === "AbortError") {
       throw new ApiError("The server took too long to respond. It may be waking up — please try again.");

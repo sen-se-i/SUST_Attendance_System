@@ -201,9 +201,9 @@ class AttendanceFlowIntegrationTest {
         var studentAuth = authService.register(new RegisterRequest("student-" + suffix + "@example.com", "password", Role.STUDENT, "REG-" + suffix, null));
         UserPrincipal teacher = new UserPrincipal(teacherAuth.userId(), "teacher-" + suffix + "@example.com", "", Role.ADMIN, null);
         UserPrincipal student = new UserPrincipal(studentAuth.userId(), "student-" + suffix + "@example.com", "", Role.STUDENT, "REG-" + suffix);
-        var createdClass = classService.create(new CreateClassRequest("CSE", "2026", "CSE101"), teacher);
+        var createdClass = classService.create(new CreateClassRequest("CSE", "2023-24", "1st", "CSE101", "Computer Science", 3.0), teacher);
         rosterService.addRoster(createdClass.id(), new RosterRequest(List.of("REG-" + suffix)), teacher);
-        enrollmentService.join(new JoinClassRequest(createdClass.code(), "REG-" + suffix), student);
+        enrollmentService.joinDirect(new com.jarvisatt.attendance.dto.ClassDtos.JoinClassDirectRequest(createdClass.code()), student);
         var session = sessionLifecycleService.start(new StartSessionRequest(createdClass.id(), 23.777176, 90.399452, 1.0, OffsetDateTime.now(), radiusMeters, 2, 5), teacher);
         return new Fixture(student, session);
     }

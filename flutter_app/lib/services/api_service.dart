@@ -264,4 +264,105 @@ class ApiService {
       return ApiResponse(isSuccess: false, message: 'Error loading class history: $e');
     }
   }
+
+  static Future<ApiResponse<ClassModel>> createClass({
+    required String token,
+    required String department,
+    required String academicSession,
+    required String semester,
+    required String subjectCode,
+    String? subjectName,
+    double? credits,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/classes'),
+        headers: _headers(token),
+        body: jsonEncode({
+          'department': department,
+          'academicSession': academicSession,
+          'semester': semester,
+          'subjectCode': subjectCode,
+          'subjectName': subjectName,
+          'credits': credits,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final classObj = ClassModel.fromJson(jsonDecode(response.body));
+        return ApiResponse(isSuccess: true, data: classObj);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(isSuccess: false, message: error['message'] ?? 'Failed to create class');
+      }
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error creating class: $e');
+    }
+  }
+
+  static Future<ApiResponse<void>> resetStudentDevice(String token, String studentId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/attendance/students/$studentId/reset-device'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true);
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to reset student device');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error resetting device: $e');
+    }
+  }
+
+  static Future<ApiResponse<List<AttendanceRecordModel>>> fetchStudentClassHistory(
+      String token, String classId, String studentId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/attendance/classes/$classId/students/$studentId'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body);
+        List<AttendanceRecordModel> records = list.map((x) => AttendanceRecordModel.fromJson(x)).toList();
+        return ApiResponse(isSuccess: true, data: records);
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to load student history');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error loading student history: $e');
+    }
+  }
+
+  static Future<ApiResponse<void>> deleteStudentClassHistory(
+      String token, String classId, String studentId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/attendance/classes/$classId/students/$studentId'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true);
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to delete student history');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error deleting student history: $e');
+    }
+  }
+
+  static Future<ApiResponse<void>> deleteBatchAttendanceRecords(
+      String token, List<String> recordIds) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/attendance/records/batch-delete'),
+        headers: _headers(token),
+        body: jsonEncode(recordIds),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true);
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to delete selected records');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error deleting records: $e');
+    }
+  }
 }

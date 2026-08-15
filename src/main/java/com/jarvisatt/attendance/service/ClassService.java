@@ -34,11 +34,27 @@ public class ClassService {
     @Transactional
     public ClassResponse create(CreateClassRequest request, UserPrincipal teacher) {
         User owner = userRepository.findById(teacher.id()).orElseThrow();
+
+        // 1. Session format validation (YYYY-YY e.g. 2023-24)
+        if (request.academicSession() == null || !request.academicSession().matches("^\\d{4}-\\d{2}$")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Session must be in format YYYY-YY (e.g. 2023-24)");
+        }
+
+        // 2. Duplicate Subject check for Session + Semester + Subject
+        if (classRepository.existsByTeacherIdAndAcademicSessionAndSemesterAndSubjectCode(
+                teacher.id(), request.academicSession(), request.semester(), request.subjectCode())) {
+            throw new ApiException(HttpStatus.CONFLICT, 
+                "Class already exists for subject " + request.subjectCode() + " in session " + request.academicSession() + " (" + request.semester() + ")");
+        }
+
         ClassEntity entity = new ClassEntity();
-        entity.setCode(uniqueCode());
+        entity.setCode(uniqueCode(request.subjectCode(), request.academicSession()));
         entity.setDepartment(request.department());
         entity.setAcademicSession(request.academicSession());
+        entity.setSemester(request.semester());
         entity.setSubjectCode(request.subjectCode());
+        entity.setSubjectName(request.subjectName());
+        entity.setCredits(request.credits());
         entity.setTeacher(owner);
         classRepository.save(entity);
         return response(entity);
@@ -59,19 +75,46 @@ public class ClassService {
         return classRepository.findByTeacherId(teacher.id()).stream().map(this::response).toList();
     }
 
-    private String uniqueCode() {
-        String code;
-        do {
-            StringBuilder builder = new StringBuilder(6);
-            for (int i = 0; i < 6; i++) {
-                builder.append(ALPHABET.charAt(random.nextInt(ALPHABET.length())));
-            }
-            code = builder.toString();
-        } while (classRepository.existsByCode(code));
+    private String uniqueCode(String subjectCode, String academicSession) {
+        String baseCode = (subjectCode != null ? subjectCode.replaceAll("[^A-Za-z0-9]", "") : "CLASS") +
+                          (academicSession != null ? academicSession.replaceAll("[^0-9]", "") : "");
+        if (baseCode.length() > 6) {
+            baseCode = baseCode.substring(0, 6);
+        }
+        String code = baseCode.toUpperCase();
+        if (code.isBlank() || classRepository.existsByCode(code)) {
+            int counter = 1;
+            do {
+                code = (baseCode + counter).toUpperCase();
+                if (code.length() > 6) {
+                    code = code.substring(0, 6);
+                }
+                counter++;
+            } while (classRepository.existsByCode(code));
+        }
         return code;
     }
 
+    private final com.jarvisatt.attendance.repository.ClassSessionRepository classSessionRepository;
+
     private ClassResponse response(ClassEntity entity) {
-        return new ClassResponse(entity.getId(), entity.getCode(), entity.getDepartment(), entity.getAcademicSession(), entity.getSubjectCode());
+        String teacherName = entity.getTeacher() != null ? entity.getTeacher().getEmail() : "Faculty";
+        java.time.OffsetDateTime lastSessionAt = classSessionRepository
+                .findFirstByClassEntityIdOrderByStartedAtDesc(entity.getId())
+                .map(com.jarvisatt.attendance.domain.ClassSession::getStartedAt)
+                .orElse(null);
+
+        return new ClassResponse(
+            entity.getId(),
+            entity.getCode(),
+            entity.getDepartment(),
+            entity.getAcademicSession(),
+            entity.getSemester(),
+            entity.getSubjectCode(),
+            entity.getSubjectName(),
+            entity.getCredits(),
+            teacherName,
+            lastSessionAt
+        );
     }
 }

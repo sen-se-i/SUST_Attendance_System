@@ -250,6 +250,35 @@ public class AttendanceService {
                 .toList();
     }
 
+    @Transactional
+    public void resetStudentDevice(UUID studentId) {
+        deviceRepository.deleteByStudentId(studentId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AttendanceRecordResponse> studentClassHistory(UUID classId, UUID studentId) {
+        return attendanceRecordRepository.findByClassEntityIdAndStudentIdOrderByScannedAtDesc(classId, studentId).stream()
+                .map(this::response)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteStudentClassHistory(UUID classId, UUID studentId) {
+        attendanceRecordRepository.deleteByClassEntityIdAndStudentId(classId, studentId);
+    }
+
+    @Transactional
+    public void deleteAttendanceRecord(UUID recordId) {
+        attendanceRecordRepository.deleteById(recordId);
+    }
+
+    @Transactional
+    public void deleteBatchAttendanceRecords(List<UUID> recordIds) {
+        if (recordIds != null && !recordIds.isEmpty()) {
+            attendanceRecordRepository.deleteByIdIn(recordIds);
+        }
+    }
+
     private AttendanceRecordResponse response(AttendanceRecord record) {
         return new AttendanceRecordResponse(
                 record.getId(),

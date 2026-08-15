@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { LogIn, UserPlus, LoaderCircle } from "lucide-react";
+import { LogIn, UserPlus, LoaderCircle, KeyRound, X } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 import { useToast } from "../lib/ToastContext";
-import { ApiError } from "../lib/api";
+import { api, ApiError, setToken } from "../lib/api";
 
 const initialLogin = { email: "", password: "" };
 const initialRegister = { email: "", password: "", role: "STUDENT", registrationNo: "" };
@@ -14,6 +14,12 @@ export default function AuthPage() {
   const [loginForm, setLoginForm] = useState(initialLogin);
   const [registerForm, setRegisterForm] = useState(initialRegister);
   const [busy, setBusy] = useState(false);
+
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotRegNo, setForgotRegNo] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to={user.role === "ADMIN" ? "/teacher" : "/student"} replace />;
@@ -44,6 +50,28 @@ export default function AuthPage() {
     }
   }
 
+  async function handleResetPassword(e) {
+    e.preventDefault();
+    if (!forgotRegNo.trim() || !newPassword.trim()) return;
+    setResetBusy(true);
+    try {
+      await api("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ registrationNo: forgotRegNo.trim(), newPassword: newPassword.trim() }),
+      });
+      notify("Password reset successfully! Device lock cleared. You can now login.", "success");
+      setToken(null);
+      setShowForgotModal(false);
+      setLoginForm((prev) => ({ ...prev, password: newPassword }));
+      setForgotRegNo("");
+      setNewPassword("");
+    } catch (error) {
+      notify(error instanceof ApiError ? error.message : "Password reset failed", "danger");
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
   return (
     <div className="auth-grid">
       <form className="panel glass-panel" onSubmit={handleLogin}>
@@ -52,7 +80,7 @@ export default function AuthPage() {
         </h2>
         <div className="form-group">
           <label className="form-label" htmlFor="login-email">
-            Email
+            Email / Student Account
           </label>
           <input
             id="login-email"
@@ -65,9 +93,18 @@ export default function AuthPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="login-password">
-            Password
-          </label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label className="form-label" htmlFor="login-password">
+              Password
+            </label>
+            <button
+              type="button"
+              style={{ background: "none", border: "none", color: "#00E6FF", fontSize: "0.8rem", cursor: "pointer", fontWeight: 700 }}
+              onClick={() => setShowForgotModal(true)}
+            >
+              Forgot Password?
+            </button>
+          </div>
           <input
             id="login-password"
             className="form-input"
@@ -177,6 +214,64 @@ export default function AuthPage() {
           )}
         </button>
       </form>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="panel glass-panel" style={{ width: "min(90vw, 420px)", border: "1px solid #00E6FF", position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(false)}
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+            >
+              <X size={20} />
+            </button>
+
+            <h3 style={{ fontSize: "1.3rem", color: "#ffffff", fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+              <KeyRound size={20} color="#00E6FF" /> Reset Account Password
+            </h3>
+            <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: 16 }}>
+              Enter your Registration Number (e.g. <code>2023831061</code>) or Email address to set a new password and clear any device lock.
+            </p>
+
+            <form onSubmit={handleResetPassword}>
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label className="form-label">Registration No or Email</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. 2023831061"
+                  value={forgotRegNo}
+                  onChange={(e) => setForgotRegNo(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label className="form-label">New Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowForgotModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={resetBusy}>
+                  {resetBusy ? "Resetting..." : "Reset Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
