@@ -2,10 +2,13 @@ package com.jarvisatt.attendance.service;
 
 import com.jarvisatt.attendance.domain.ClassSession;
 import com.jarvisatt.attendance.domain.ClassSessionStatus;
+import com.jarvisatt.attendance.domain.EnrollmentStatus;
+import com.jarvisatt.attendance.domain.Role;
 import com.jarvisatt.attendance.dto.SessionDtos.*;
 import com.jarvisatt.attendance.exception.ApiException;
 import com.jarvisatt.attendance.repository.AttendanceRecordRepository;
 import com.jarvisatt.attendance.repository.ClassSessionRepository;
+import com.jarvisatt.attendance.repository.EnrollmentRepository;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import com.jarvisatt.attendance.session.SessionEngine;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ public class SessionLifecycleService {
     private final ClassService classService;
     private final ClassSessionRepository classSessionRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
+    private final EnrollmentRepository enrollmentRepository;
     private final SessionEngine sessionEngine;
 
     @Transactional
@@ -85,8 +89,14 @@ public class SessionLifecycleService {
 
     /** Returns ALL sessions for a class (including empty/zero-attendance ones), newest first. */
     @Transactional(readOnly = true)
-    public List<SessionHistoryResponse> listByClass(UUID classId, UserPrincipal teacher) {
-        classService.ownedClass(classId, teacher); // ownership check
+    public List<SessionHistoryResponse> listByClass(UUID classId, UserPrincipal principal) {
+        if (principal.role() == Role.ADMIN) {
+            classService.ownedClass(classId, principal); // ownership check
+        } else {
+            if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(classId, principal.id(), EnrollmentStatus.ACTIVE)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "You are not enrolled in this class");
+            }
+        }
         return classSessionRepository.findByClassEntityIdOrderByStartedAtDesc(classId).stream()
                 .map(s -> {
                     long count = attendanceRecordRepository.countBySessionId(s.getId());

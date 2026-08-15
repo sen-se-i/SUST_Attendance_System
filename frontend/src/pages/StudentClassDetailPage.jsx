@@ -26,12 +26,20 @@ export default function StudentClassDetailPage() {
       const found = classes.find((c) => c.id === classId);
       if (found) setClassInfo(found);
 
-      // 2. Load student's attendance records
+      // 2. Load ALL conducted sessions for this class
+      try {
+        const sessions = await api(`/api/sessions/class/${classId}`);
+        setSessionList(sessions);
+      } catch {
+        setSessionList([]);
+      }
+
+      // 3. Load student's own attendance records
       const records = await api("/api/attendance/me");
       const filteredRecords = records.filter((r) => r.classId === classId);
       setMyRecords(filteredRecords);
 
-      // 3. Check active session for this class
+      // 4. Check active session for this class
       try {
         const active = await api(`/api/sessions/active?classId=${classId}`);
         setActiveSession(active);
@@ -51,8 +59,6 @@ export default function StudentClassDetailPage() {
     if (!activeSession) return;
     setClaiming(true);
     try {
-      // Use the same calibrated GPS loop as the teacher capture.
-      // It retries up to 6 times and rejects if accuracy > session radius.
       const radiusMeters = activeSession.radiusMeters || 20;
       const location = await captureCalibratedLocation(radiusMeters);
 
@@ -83,17 +89,17 @@ export default function StudentClassDetailPage() {
     }
   }
 
-  // Calculate Stats
-  const totalMyRecords = myRecords.length;
-  // Unique sessions recorded
-  const uniqueSessionIds = new Set(myRecords.map((r) => r.sessionId));
+  // Calculate Accurate Stats based on total conducted sessions vs attended sessions
+  const totalConducted = sessionList.length;
+  const totalAttended = myRecords.length;
+  const attendanceRate = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
 
   return (
     <div style={{ paddingBottom: 60 }}>
       {/* Back Button */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <button type="button" className="btn btn-secondary" onClick={() => navigate("/student")}>
-          <ArrowLeft size={16} /> Back to Dashboard
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={() => navigate("/student")}>
+          <ArrowLeft size={15} /> Back to Dashboard
         </button>
       </div>
 
@@ -157,21 +163,21 @@ export default function StudentClassDetailPage() {
       {/* Attendance Summary Stats Box */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 18 }}>
         <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 12 }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>TOTAL CONDUCTED</span>
+          <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>TOTAL SESSIONS CONDUCTED</span>
           <span style={{ color: "#ffffff", fontSize: "1.35rem", fontWeight: 900, marginTop: 2, display: "block" }}>
-            {myRecords.length}
+            {totalConducted}
           </span>
         </div>
         <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 12 }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>TOTAL ATTENDED</span>
+          <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>SESSIONS ATTENDED</span>
           <span style={{ color: "#00FF88", fontSize: "1.35rem", fontWeight: 900, marginTop: 2, display: "block" }}>
-            {totalMyRecords}
+            {totalAttended}
           </span>
         </div>
         <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 12 }}>
           <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>ATTENDANCE RATE</span>
-          <span style={{ color: "#00E6FF", fontSize: "1.35rem", fontWeight: 900, marginTop: 2, display: "block" }}>
-            {myRecords.length > 0 ? "100%" : "0%"}
+          <span style={{ color: attendanceRate >= 75 ? "#00FF88" : attendanceRate >= 50 ? "#f59e0b" : "#ef4444", fontSize: "1.35rem", fontWeight: 900, marginTop: 2, display: "block" }}>
+            {attendanceRate}%
           </span>
         </div>
       </div>
@@ -179,43 +185,69 @@ export default function StudentClassDetailPage() {
       {/* Class Attendance Records Table */}
       <div className="panel glass-panel" style={{ border: "1px solid #213042", padding: 18 }}>
         <h2 style={{ fontSize: "1.1rem", marginBottom: 12 }}>
-          <Calendar size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Class Attendance Log
+          <Calendar size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Class Session Log ({sessionList.length})
         </h2>
 
-        {myRecords.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "32px", color: "#94a3b8" }}>
-            No attendance records logged for this class yet.
+        {sessionList.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8", fontSize: "0.85rem" }}>
+            No attendance sessions have been conducted for this class yet.
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="table" style={{ width: "100%", textAlign: "left" }}>
+            <table className="table" style={{ width: "100%", textAlign: "left", fontSize: "0.85rem" }}>
               <thead>
                 <tr>
-                  <th>Session Date</th>
-                  <th>Attendance Status</th>
-                  <th>Submitted Time</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Session Date &amp; Time</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Attendance Status</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Submitted Time / Distance</th>
                 </tr>
               </thead>
               <tbody>
-                {myRecords.map((r) => {
-                  const d = new Date(r.scannedAt);
-                  const isPresent = true; // All records in myRecords are verified attendances
+                {sessionList.map((s) => {
+                  const record = myRecords.find((r) => r.sessionId === s.sessionId);
+                  const isPresent = !!record;
                   return (
-                    <tr key={r.id} style={{ borderBottom: "1px solid #213042" }}>
-                      <td style={{ color: "#ffffff", fontWeight: 600 }}>{d.toLocaleDateString()}</td>
-                      <td>
+                    <tr key={s.sessionId} style={{ borderBottom: "1px solid #213042" }}>
+                      <td style={{ color: "#ffffff", fontWeight: 600, padding: "10px" }}>
+                        <Clock size={13} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 5 }} />
+                        {new Date(s.startedAt).toLocaleString()}
+                      </td>
+                      <td style={{ padding: "10px" }}>
                         {isPresent ? (
-                          <span className="badge badge-success" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <CheckCircle2 size={14} /> YES
+                          <span className="badge badge-success" style={{ fontSize: "0.72rem", padding: "3px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                            <CheckCircle2 size={13} /> PRESENT
                           </span>
                         ) : (
-                          <span style={{ color: "#ef4444", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <XCircle size={14} /> NO
+                          <span
+                            className="badge"
+                            style={{
+                              fontSize: "0.72rem",
+                              padding: "3px 8px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              background: "rgba(239, 68, 68, 0.15)",
+                              color: "#ef4444",
+                              border: "1px solid rgba(239, 68, 68, 0.4)",
+                            }}
+                          >
+                            <XCircle size={13} /> ABSENT
                           </span>
                         )}
                       </td>
-                      <td style={{ color: isPresent ? "#00FF88" : "#94a3b8", fontWeight: 600 }}>
-                        {isPresent ? d.toLocaleTimeString() : "-"}
+                      <td style={{ color: isPresent ? "#00FF88" : "#64748b", fontWeight: 600, padding: "10px" }}>
+                        {isPresent ? (
+                          <>
+                            {new Date(record.scannedAt).toLocaleTimeString()}
+                            {record.distanceMeters !== undefined && (
+                              <span style={{ color: "#94a3b8", fontSize: "0.78rem", marginLeft: 6 }}>
+                                ({record.distanceMeters.toFixed(1)}m)
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          "Missed"
+                        )}
                       </td>
                     </tr>
                   );
@@ -228,3 +260,4 @@ export default function StudentClassDetailPage() {
     </div>
   );
 }
+

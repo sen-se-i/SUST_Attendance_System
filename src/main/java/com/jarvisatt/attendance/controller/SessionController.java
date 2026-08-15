@@ -49,7 +49,7 @@ public class SessionController {
 
     /** Returns ALL sessions for a class (including empty ones), newest first. */
     @GetMapping("/class/{classId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     List<SessionHistoryResponse> listByClass(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
         return sessionLifecycleService.listByClass(classId, principal);
     }
