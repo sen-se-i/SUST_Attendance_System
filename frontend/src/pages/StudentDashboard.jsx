@@ -86,36 +86,34 @@ export default function StudentDashboard() {
               onClick={() => navigate(`/student/class/${item.id}`)}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                <span className="badge badge-success" style={{ fontSize: "0.75rem", fontFamily: "monospace" }}>
+                {item.credits ? (
+                  <span style={{ color: "#00FF88", fontWeight: 700, fontSize: "0.85rem" }}>{item.credits} Credits</span>
+                ) : <span />}
+                <span className="badge badge-success" style={{ fontSize: "0.72rem", fontFamily: "monospace" }}>
                   CODE: {item.code}
                 </span>
-                {item.credits && (
-                  <span style={{ color: "#00FF88", fontWeight: 700, fontSize: "0.85rem" }}>
-                    {item.credits} Credits
-                  </span>
-                )}
               </div>
 
-              {/* Subject Name (Large) */}
-              <h3 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+              {/* Subject Name — primary, large */}
+              <h3 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 4px" }}>
                 {item.subjectName || item.subjectCode}
               </h3>
 
-              {/* Teacher Name */}
-              <p style={{ color: "#00E6FF", fontWeight: 600, fontSize: "0.9rem", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                <User size={14} /> Teacher: {item.teacherName || "Faculty"}
+              {/* Subject Code + Session — secondary */}
+              <p style={{ color: "#00E6FF", fontSize: "0.85rem", fontWeight: 600, margin: "0 0 6px" }}>
+                {item.subjectCode} &nbsp;•&nbsp; {item.academicSession} {item.semester ? `• ${item.semester}` : ""}
               </p>
 
-              {/* Subject Code - Credit */}
-              <p style={{ color: "#cbd5e1", fontSize: "0.85rem", margin: "0 0 12px" }}>
-                {item.subjectCode} • {item.credits ? `${item.credits} Credits` : "3.0 Credits"}
+              {/* Teacher Name */}
+              <p style={{ color: "#94a3b8", fontWeight: 600, fontSize: "0.85rem", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 6 }}>
+                <User size={13} /> {item.teacherName || "Faculty"}
               </p>
 
               {/* Last Session Date */}
               <div style={{ background: "rgba(0, 230, 255, 0.06)", border: "1px solid #213042", padding: "8px 12px", borderRadius: 8, fontSize: "0.8rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={14} color="#00E6FF" />
                 <span>
-                  Last Session: {item.lastSessionAt ? new Date(item.lastSessionAt).toLocaleString() : "No sessions conducted yet"}
+                  Last Session: {item.lastSessionAt ? new Date(item.lastSessionAt).toLocaleString() : "No sessions yet"}
                 </span>
               </div>
 

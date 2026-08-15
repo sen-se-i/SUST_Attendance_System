@@ -4,6 +4,7 @@ import com.jarvisatt.attendance.domain.ClassSession;
 import com.jarvisatt.attendance.domain.ClassSessionStatus;
 import com.jarvisatt.attendance.dto.SessionDtos.*;
 import com.jarvisatt.attendance.exception.ApiException;
+import com.jarvisatt.attendance.repository.AttendanceRecordRepository;
 import com.jarvisatt.attendance.repository.ClassSessionRepository;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import com.jarvisatt.attendance.session.SessionEngine;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class SessionLifecycleService {
     private final ClassService classService;
     private final ClassSessionRepository classSessionRepository;
+    private final AttendanceRecordRepository attendanceRecordRepository;
     private final SessionEngine sessionEngine;
 
     @Transactional
@@ -78,6 +81,35 @@ public class SessionLifecycleService {
             throw new ApiException(HttpStatus.NOT_FOUND, "No active session for this class");
         }
         return response(session);
+    }
+
+    /** Returns ALL sessions for a class (including empty/zero-attendance ones), newest first. */
+    @Transactional(readOnly = true)
+    public List<SessionHistoryResponse> listByClass(UUID classId, UserPrincipal teacher) {
+        classService.ownedClass(classId, teacher); // ownership check
+        return classSessionRepository.findByClassEntityIdOrderByStartedAtDesc(classId).stream()
+                .map(s -> {
+                    int count = attendanceRecordRepository.countBySessionId(s.getId());
+                    return new SessionHistoryResponse(
+                            s.getId(),
+                            s.getStatus().name(),
+                            s.getStartedAt(),
+                            s.getEndedAt(),
+                            s.getRadiusMeters(),
+                            count);
+                })
+                .toList();
+    }
+
+    /** Deletes a session and all its attendance records. */
+    @Transactional
+    public void deleteSession(UUID sessionId, UserPrincipal teacher) {
+        ClassSession session = classSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found"));
+        classService.ownedClass(session.getClassEntity().getId(), teacher); // ownership check
+        sessionEngine.stop(sessionId); // stop engine if still running
+        attendanceRecordRepository.deleteBySessionId(sessionId);
+        classSessionRepository.deleteById(sessionId);
     }
 
     public SessionResponse response(ClassSession session) {

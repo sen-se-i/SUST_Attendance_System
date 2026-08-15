@@ -252,19 +252,21 @@ export default function TeacherDashboard() {
               }}
               onClick={() => navigate(`/teacher/class/${item.id}`)}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                <span className="badge badge-success" style={{ fontSize: "0.75rem", fontFamily: "monospace" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                {item.credits ? (
+                  <span style={{ color: "#00FF88", fontWeight: 700, fontSize: "0.85rem" }}>{item.credits} Credits</span>
+                ) : <span />}
+                <span className="badge badge-success" style={{ fontSize: "0.72rem", fontFamily: "monospace" }}>
                   CODE: {item.code}
                 </span>
-                <span style={{ color: "#00FF88", fontWeight: 700, fontSize: "0.85rem" }}>
-                  {item.credits ? `${item.credits} Credits` : ""}
-                </span>
               </div>
-              <h3 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#ffffff", marginBottom: 6 }}>
+              {/* Subject Name — primary, large */}
+              <h3 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 4px" }}>
                 {item.subjectName || item.subjectCode}
               </h3>
+              {/* Subject Code + Session — secondary */}
               <p style={{ color: "#00E6FF", fontSize: "0.85rem", fontWeight: 600, margin: "0 0 12px" }}>
-                {item.subjectCode} • {item.academicSession}
+                {item.subjectCode} &nbsp;•&nbsp; {item.academicSession} &nbsp;•&nbsp; {item.semester || ""}
               </p>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #213042", paddingTop: 12, marginTop: 12, fontSize: "0.8rem", color: "#94a3b8" }}>
                 <span>{item.department}</span>

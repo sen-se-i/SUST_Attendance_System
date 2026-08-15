@@ -15,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +45,21 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     SessionResponse active(@RequestParam UUID classId) {
         return sessionLifecycleService.activeSession(classId);
+    }
+
+    /** Returns ALL sessions for a class (including empty ones), newest first. */
+    @GetMapping("/class/{classId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    List<SessionHistoryResponse> listByClass(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
+        return sessionLifecycleService.listByClass(classId, principal);
+    }
+
+    /** Deletes a session and all its attendance records. */
+    @DeleteMapping("/{sessionId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    Map<String, String> deleteSession(@PathVariable UUID sessionId, @AuthenticationPrincipal UserPrincipal principal) {
+        sessionLifecycleService.deleteSession(sessionId, principal);
+        return Map.of("status", "DELETED");
     }
 
     @GetMapping("/{sessionId}/current")

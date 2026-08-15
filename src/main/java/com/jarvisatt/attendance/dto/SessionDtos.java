@@ -42,4 +42,14 @@ public final class SessionDtos {
             Double accuracyMeters,
             Double radiusMeters
     ) {}
+
+    /** Lightweight record used in the teacher's class session history table. */
+    public record SessionHistoryResponse(
+            UUID sessionId,
+            String status,
+            OffsetDateTime startedAt,
+            OffsetDateTime endedAt,
+            Double radiusMeters,
+            int attendanceCount
+    ) {}
 }

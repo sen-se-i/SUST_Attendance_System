@@ -38,6 +38,7 @@ export default function TeacherClassDetailPage() {
   const [showAdvance, setShowAdvance] = useState(false);
   const [selectedRecordIds, setSelectedRecordIds] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ open: false, type: null, data: null });
+  const [deleteSessionModal, setDeleteSessionModal] = useState({ open: false, sessionId: null });
 
   const loadData = useCallback(async () => {
     try {
@@ -51,19 +52,9 @@ export default function TeacherClassDetailPage() {
       const records = await api(`/api/attendance/classes/${classId}`);
       setAttendanceRecords(records);
 
-      // Group records into sessions history
-      const sessionMap = new Map();
-      records.forEach((r) => {
-        if (!sessionMap.has(r.sessionId)) {
-          sessionMap.set(r.sessionId, {
-            sessionId: r.sessionId,
-            scannedAt: r.scannedAt,
-            count: 0,
-          });
-        }
-        sessionMap.get(r.sessionId).count++;
-      });
-      setHistorySessions(Array.from(sessionMap.values()));
+      // Load ALL sessions from the dedicated endpoint (includes empty sessions)
+      const sessions = await api(`/api/sessions/class/${classId}`);
+      setHistorySessions(sessions);
     } catch (error) {
       notify(error instanceof ApiError ? error.message : "Failed to load class details", "danger");
     }
@@ -192,6 +183,20 @@ export default function TeacherClassDetailPage() {
     setSelectedRecordIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   }
 
+  async function handleDeleteSession(sessionId) {
+    setBusy(true);
+    try {
+      await api(`/api/sessions/${sessionId}`, { method: "DELETE" });
+      notify("Session and all its records deleted.", "success");
+      setDeleteSessionModal({ open: false, sessionId: null });
+      await loadData();
+    } catch (error) {
+      notify(error instanceof ApiError ? error.message : "Failed to delete session", "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div style={{ paddingBottom: 60 }}>
       {/* Back to Dashboard Bar */}
@@ -245,42 +250,97 @@ export default function TeacherClassDetailPage() {
         </p>
 
         {historySessions.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>No attendance sessions conducted yet.</div>
+          <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>No sessions conducted yet.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table className="table" style={{ width: "100%", textAlign: "left" }}>
               <thead>
                 <tr>
-                  <th>Session Date & Time</th>
+                  <th>Session Date &amp; Time</th>
+                  <th>Status</th>
                   <th>Verified Students</th>
-                  <th>Action</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {historySessions.map((s) => (
-                  <tr key={s.sessionId} style={{ borderBottom: "1px solid #213042" }}>
-                    <td style={{ color: "#ffffff", fontWeight: 600 }}>
-                      <Clock size={14} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} />
-                      {new Date(s.scannedAt).toLocaleString()}
-                    </td>
-                    <td style={{ color: "#00FF88", fontWeight: 700 }}>{s.count} Student(s)</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: "4px 12px", fontSize: "0.8rem" }}
-                        onClick={() => navigate(`/teacher/class/${classId}/session/${s.sessionId}`)}
-                      >
-                        View Logs <ChevronRight size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {historySessions.map((s) => {
+                  const isEmpty = s.attendanceCount === 0;
+                  return (
+                    <tr key={s.sessionId} style={{ borderBottom: "1px solid #213042" }}>
+                      <td style={{ color: "#ffffff", fontWeight: 600 }}>
+                        <Clock size={14} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} />
+                        {new Date(s.startedAt).toLocaleString()}
+                      </td>
+                      <td>
+                        <span
+                          className={`badge ${s.status === "ENDED" ? "badge-secondary" : "badge-success"}`}
+                          style={{ fontSize: "0.72rem" }}
+                        >
+                          {s.status}
+                        </span>
+                      </td>
+                      <td style={{ color: isEmpty ? "#ef4444" : "#00FF88", fontWeight: 700 }}>
+                        {isEmpty ? "0 — No attendance" : `${s.attendanceCount} Student(s)`}
+                      </td>
+                      <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: "4px 12px", fontSize: "0.8rem" }}
+                          onClick={() => navigate(`/teacher/class/${classId}/session/${s.sessionId}`)}
+                        >
+                          View Logs <ChevronRight size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                          onClick={() => setDeleteSessionModal({ open: true, sessionId: s.sessionId })}
+                        >
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {/* Delete Session Confirm Modal */}
+      {deleteSessionModal.open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="panel glass-panel" style={{ maxWidth: 420, width: "90%", border: "1px solid #ef4444", padding: 28 }}>
+            <h3 style={{ color: "#ef4444", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+              <Trash2 size={20} /> Delete Session?
+            </h3>
+            <p style={{ color: "#94a3b8", marginBottom: 20, fontSize: "0.9rem" }}>
+              This will permanently delete this session and <strong style={{ color: "#ffffff" }}>all its attendance records</strong>. This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={busy}
+                onClick={() => handleDeleteSession(deleteSessionModal.sessionId)}
+                style={{ flex: 1 }}
+              >
+                <Trash2 size={14} /> Yes, Delete
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setDeleteSessionModal({ open: false, sessionId: null })}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Active Students Section */}
       <div className="panel glass-panel" style={{ marginTop: 24, border: "1px solid #213042" }}>
