@@ -7,9 +7,12 @@ import com.jarvisatt.attendance.dto.AuthDtos.*;
 import com.jarvisatt.attendance.exception.ApiException;
 import com.jarvisatt.attendance.repository.UserRepository;
 import com.jarvisatt.attendance.repository.DeviceRepository;
+import com.jarvisatt.attendance.repository.EnrollmentRepository;
+import com.jarvisatt.attendance.repository.AttendanceRecordRepository;
 import com.jarvisatt.attendance.security.JwtService;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,12 @@ public class AuthService {
     private final DeviceRepository deviceRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+
+    @Autowired(required = false)
+    private EnrollmentRepository enrollmentRepository;
+
+    @Autowired(required = false)
+    private AttendanceRecordRepository attendanceRecordRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -106,9 +115,6 @@ public class AuthService {
         deviceRepository.deleteByStudentId(user.getId());
     }
 
-    private final EnrollmentRepository enrollmentRepository;
-    private final AttendanceRecordRepository attendanceRecordRepository;
-
     @Transactional
     public void deleteUserByEmailOrRegistrationNo(String target) {
         User user = userRepository.findByEmail(target.trim().toLowerCase())
@@ -116,8 +122,12 @@ public class AuthService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User account not found for: " + target));
 
         deviceRepository.deleteByStudentId(user.getId());
-        enrollmentRepository.deleteByStudentId(user.getId());
-        attendanceRecordRepository.deleteByStudentId(user.getId());
+        if (enrollmentRepository != null) {
+            enrollmentRepository.deleteByStudentId(user.getId());
+        }
+        if (attendanceRecordRepository != null) {
+            attendanceRecordRepository.deleteByStudentId(user.getId());
+        }
         userRepository.delete(user);
     }
 
