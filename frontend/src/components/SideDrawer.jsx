@@ -33,7 +33,7 @@ export function SideDrawer({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Backdrop Overlay */}
+
       <div
         onClick={onClose}
         style={{
@@ -50,7 +50,6 @@ export function SideDrawer({ isOpen, onClose }) {
         }}
       />
 
-      {/* Sliding Side Drawer Panel */}
       <div
         style={{
           position: "fixed",
@@ -69,7 +68,7 @@ export function SideDrawer({ isOpen, onClose }) {
           boxSizing: "border-box",
         }}
       >
-        {/* Drawer Header */}
+
         <div
           style={{
             display: "flex",
@@ -134,7 +133,6 @@ export function SideDrawer({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Menu Items Area */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
           <button
             type="button"
@@ -159,7 +157,6 @@ export function SideDrawer({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Bottom Logout Area */}
         <div style={{ borderTop: "1px solid #213042", paddingTop: 16, marginTop: "auto" }}>
           <button
             type="button"
@@ -188,7 +185,6 @@ export function SideDrawer({ isOpen, onClose }) {
         </div>
       </div>
 
-      {/* Clean User Profile Modal */}
       {showProfileModal && (
         <div
           style={{
@@ -224,7 +220,7 @@ export function SideDrawer({ isOpen, onClose }) {
               boxSizing: "border-box",
             }}
           >
-            {/* Top Close Icon */}
+
             <button
               type="button"
               onClick={() => setShowProfileModal(false)}
@@ -241,7 +237,6 @@ export function SideDrawer({ isOpen, onClose }) {
               <X size={20} />
             </button>
 
-            {/* Profile Avatar Header */}
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <div
                 style={{
@@ -281,7 +276,6 @@ export function SideDrawer({ isOpen, onClose }) {
               </span>
             </div>
 
-            {/* Profile Field Cards */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div
                 style={{
@@ -387,7 +381,6 @@ export function SideDrawer({ isOpen, onClose }) {
               </div>
             </div>
 
-            {/* Modal Bottom Actions */}
             <div style={{ textAlign: "right", marginTop: 24 }}>
               <button
                 type="button"
@@ -404,3 +397,4 @@ export function SideDrawer({ isOpen, onClose }) {
     </>
   );
 }
+

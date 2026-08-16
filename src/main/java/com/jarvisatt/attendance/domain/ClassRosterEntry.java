@@ -30,3 +30,4 @@ public class ClassRosterEntry {
 
     public record RosterId(UUID classId, String registrationNo) implements Serializable {}
 }
+

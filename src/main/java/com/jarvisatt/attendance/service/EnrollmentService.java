@@ -21,7 +21,7 @@ public class EnrollmentService {
     @Transactional
     public JoinClassResponse joinDirect(JoinClassDirectRequest request, UserPrincipal studentPrincipal) {
         User student = userRepository.findById(studentPrincipal.id()).orElseThrow();
-        
+
         String inputCode = request.effectiveCode();
         String normalizedCode = inputCode.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
 
@@ -39,7 +39,6 @@ public class EnrollmentService {
         enrollment.setStatus(EnrollmentStatus.ACTIVE);
         enrollmentRepository.save(enrollment);
 
-        // Ensure student registration number is also present in class roster
         if (student.getRegistrationNo() != null && !student.getRegistrationNo().isBlank()) {
             String cleanReg = student.getRegistrationNo().trim();
             if (!rosterRepository.existsByClassIdAndRegistrationNo(classEntity.getId(), cleanReg)) {
@@ -62,3 +61,4 @@ public class EnrollmentService {
                 .toList();
     }
 }
+

@@ -72,3 +72,4 @@ public class AttendanceController {
         attendanceService.deleteBatchAttendanceRecords(recordIds);
     }
 }
+

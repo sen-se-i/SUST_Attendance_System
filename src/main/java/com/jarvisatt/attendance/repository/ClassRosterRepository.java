@@ -11,3 +11,4 @@ public interface ClassRosterRepository extends JpaRepository<ClassRosterEntry, C
     List<ClassRosterEntry> findByClassIdOrderByRegistrationNo(UUID classId);
     void deleteByClassIdAndRegistrationNo(UUID classId, String registrationNo);
 }
+

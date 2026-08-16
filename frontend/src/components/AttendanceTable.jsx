@@ -24,3 +24,4 @@ export function AttendanceTable({ rows, emptyLabel, showSubject = false, showReg
     </div>
   );
 }
+

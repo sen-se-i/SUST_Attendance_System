@@ -47,14 +47,12 @@ public class SessionController {
         return sessionLifecycleService.activeSession(classId);
     }
 
-    /** Returns ALL sessions for a class (including empty ones), newest first. */
     @GetMapping("/class/{classId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     List<SessionHistoryResponse> listByClass(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
         return sessionLifecycleService.listByClass(classId, principal);
     }
 
-    /** Deletes a session and all its attendance records. */
     @DeleteMapping("/{sessionId}")
     @PreAuthorize("hasRole('ADMIN')")
     Map<String, String> deleteSession(@PathVariable UUID sessionId, @AuthenticationPrincipal UserPrincipal principal) {
@@ -80,3 +78,4 @@ public class SessionController {
                 .body(qrCodeService.png(payload, 420));
     }
 }
+

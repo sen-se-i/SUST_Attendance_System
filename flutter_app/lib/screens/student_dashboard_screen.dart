@@ -99,7 +99,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 accuracyMeters: 0,
                 capturedAt: DateTime.now(),
                 deviceInstallId: '',
-              ); // placeholder call
+              );
               Navigator.pop(ctx);
               _loadEnrolledClasses();
             },
@@ -328,7 +328,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Attendance Summary Stats Box
           Row(
             children: [
               Expanded(
@@ -397,3 +396,4 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 }
+

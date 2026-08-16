@@ -142,3 +142,4 @@ public class AuthService {
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getRegistrationNo());
     }
 }
+

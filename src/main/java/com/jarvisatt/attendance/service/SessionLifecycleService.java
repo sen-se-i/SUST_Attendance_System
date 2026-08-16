@@ -87,11 +87,10 @@ public class SessionLifecycleService {
         return response(session);
     }
 
-    /** Returns ALL sessions for a class (including empty/zero-attendance ones), newest first. */
     @Transactional(readOnly = true)
     public List<SessionHistoryResponse> listByClass(UUID classId, UserPrincipal principal) {
         if (principal.role() == Role.ADMIN) {
-            classService.ownedClass(classId, principal); // ownership check
+            classService.ownedClass(classId, principal);
         } else {
             if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(classId, principal.id(), EnrollmentStatus.ACTIVE)) {
                 throw new ApiException(HttpStatus.FORBIDDEN, "You are not enrolled in this class");
@@ -111,13 +110,12 @@ public class SessionLifecycleService {
                 .toList();
     }
 
-    /** Deletes a session and all its attendance records. */
     @Transactional
     public void deleteSession(UUID sessionId, UserPrincipal teacher) {
         ClassSession session = classSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found"));
-        classService.ownedClass(session.getClassEntity().getId(), teacher); // ownership check
-        sessionEngine.stop(sessionId); // stop engine if still running
+        classService.ownedClass(session.getClassEntity().getId(), teacher);
+        sessionEngine.stop(sessionId);
         attendanceRecordRepository.deleteBySessionId(sessionId);
         classSessionRepository.deleteById(sessionId);
     }
@@ -180,3 +178,4 @@ public class SessionLifecycleService {
         }
     }
 }
+

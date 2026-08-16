@@ -55,7 +55,6 @@
   padding: 28px 24px 48px;
 }
 
-/* Auth */
 .auth-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -76,7 +75,6 @@
   margin-bottom: 18px;
 }
 
-/* Workspace layout */
 .workspace {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
@@ -130,7 +128,6 @@
   border-radius: var(--radius-lg);
 }
 
-/* Class list */
 .list {
   display: grid;
   gap: 8px;
@@ -178,7 +175,6 @@ textarea.form-input {
   font-family: inherit;
 }
 
-/* Geofence session */
 .qr-stage {
   display: grid;
   justify-items: center;
@@ -195,7 +191,6 @@ textarea.form-input {
   font-size: 0.9rem;
 }
 
-/* Scanner */
 .scanner-panel {
   display: grid;
   gap: 20px;
@@ -218,7 +213,6 @@ textarea.form-input {
   display: none;
 }
 
-/* Toasts */
 .toast-stack {
   position: fixed;
   right: 20px;
@@ -266,3 +260,4 @@ textarea.form-input {
     padding: 14px 18px;
   }
 }
+

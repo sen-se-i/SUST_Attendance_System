@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Header Branding
+
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -114,7 +114,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 36),
 
-                // Form Container
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -135,7 +134,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Email Field
                       TextField(
                         controller: _emailController,
                         style: const TextStyle(color: Colors.white),
@@ -161,7 +159,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Password Field
                       TextField(
                         controller: _passwordController,
                         obscureText: true,
@@ -233,7 +230,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ],
 
-                      // Quick Demo Account Buttons
                       if (_isLogin) ...[
                         Wrap(
                           spacing: 8,
@@ -262,7 +258,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 20),
                       ],
 
-                      // Submit Button
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -315,3 +310,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

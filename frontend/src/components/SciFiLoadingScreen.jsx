@@ -6,7 +6,6 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
   const [dots, setDots] = useState("....");
   const [fading, setFading] = useState(false);
 
-  // 1. Matrix Background Cyber Rain
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -61,7 +60,6 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
     };
   }, []);
 
-  // 2. Dots Animation
   useEffect(() => {
     let count = 0;
     const interval = setInterval(() => {
@@ -71,7 +69,6 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Text Decryption & Finish Timer
   useEffect(() => {
     const phrases = [
       "DECRYPTING ATTENDANCE PROTOCOL",
@@ -129,12 +126,10 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
         }}
       />
 
-      {/* Center Loader Card */}
       <div style={{ position: "relative", zIndex: 10, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        
-        {/* Ring & Logo Stage */}
+
         <div style={{ position: "relative", width: 240, height: 240, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
-          {/* Ambient Glow */}
+
           <div
             style={{
               position: "absolute",
@@ -146,7 +141,6 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
             }}
           />
 
-          {/* SVG Concentric Rings */}
           <svg viewBox="0 0 260 260" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
             <defs>
               <linearGradient id="scifiCyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -163,24 +157,20 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
               </filter>
             </defs>
 
-            {/* Outer Track Ring */}
             <circle cx="130" cy="130" r="118" fill="none" stroke="rgba(0, 230, 255, 0.15)" strokeWidth="1" />
 
-            {/* Outer Ticks */}
             <g style={{ transformOrigin: "center", animation: "spin 12s linear infinite" }}>
               <circle cx="130" cy="130" r="118" fill="none" stroke="rgba(0, 230, 255, 0.6)" strokeWidth="2.5" strokeDasharray="4 20" />
               <circle cx="130" cy="12" r="3" fill="#00E6FF" filter="url(#scifiGlow)" />
               <circle cx="130" cy="248" r="3" fill="#00FF88" filter="url(#scifiGlow)" />
             </g>
 
-            {/* Main Fast Cyan Arc */}
             <g style={{ transformOrigin: "center", animation: "spin 3.5s linear infinite" }} filter="url(#scifiGlow)">
               <circle cx="130" cy="130" r="102" fill="none" stroke="url(#scifiCyanGrad)" strokeWidth="3.5" strokeDasharray="210 430" strokeLinecap="round" />
               <circle cx="130" cy="130" r="102" fill="none" stroke="#00FF88" strokeWidth="3" strokeDasharray="40 590" strokeDashoffset="-260" strokeLinecap="round" />
               <circle cx="232" cy="130" r="4.5" fill="#ffffff" />
             </g>
 
-            {/* Counter-Clockwise Dotted Ring */}
             <g style={{ transformOrigin: "center", animation: "spinReverse 7s linear infinite" }}>
               <circle cx="130" cy="130" r="86" fill="none" stroke="url(#scifiGreenGrad)" strokeWidth="2.5" strokeDasharray="3 14" strokeLinecap="round" />
               <circle cx="130" cy="44" r="2.5" fill="#00E6FF" />
@@ -190,7 +180,6 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
             <circle cx="130" cy="130" r="70" fill="none" stroke="rgba(0, 230, 255, 0.2)" strokeWidth="1" strokeDasharray="10 30" />
           </svg>
 
-          {/* Center Logo */}
           <img
             src="/logo.png"
             alt="SWE Logo"
@@ -205,12 +194,10 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
           />
         </div>
 
-        {/* Brand Title */}
         <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "1.5px", color: "#ffffff", marginBottom: 12, textShadow: "0 0 16px rgba(0, 230, 255, 0.6)" }}>
           SWE <span style={{ background: "linear-gradient(135deg, #00E6FF 0%, #00FF88 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Attendance System</span>
         </h1>
 
-        {/* Decrypting Terminal Box */}
         <div
           style={{
             display: "inline-flex",
@@ -245,3 +232,4 @@ export function SciFiLoadingScreen({ onFinished, minDuration = 2200 }) {
     </div>
   );
 }
+

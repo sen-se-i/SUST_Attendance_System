@@ -43,7 +43,6 @@ public final class SessionDtos {
             Double radiusMeters
     ) {}
 
-    /** Lightweight record used in the teacher's class session history table. */
     public record SessionHistoryResponse(
             UUID sessionId,
             String status,
@@ -53,3 +52,4 @@ public final class SessionDtos {
             long attendanceCount
     ) {}
 }
+

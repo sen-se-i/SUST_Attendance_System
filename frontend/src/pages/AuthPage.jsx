@@ -15,7 +15,6 @@ export default function AuthPage() {
   const [registerForm, setRegisterForm] = useState(initialRegister);
   const [busy, setBusy] = useState(false);
 
-  // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotRegNo, setForgotRegNo] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -215,7 +214,6 @@ export default function AuthPage() {
         </button>
       </form>
 
-      {/* Forgot Password Modal */}
       {showForgotModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="panel glass-panel" style={{ width: "min(90vw, 420px)", border: "1px solid #00E6FF", position: "relative" }}>
@@ -275,3 +273,4 @@ export default function AuthPage() {
     </div>
   );
 }
+

@@ -11,13 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 
-/**
- * The rotating-tick engine keeps session timers in memory. When the process
- * restarts (deploys, or the free host spinning down when idle), those timers are
- * lost but the database still marks sessions ACTIVE. Such sessions can never
- * produce ticks again and would block a class from starting a new session, so we
- * end any leftover ACTIVE sessions on startup.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -34,3 +27,4 @@ public class OrphanedSessionCleanup {
         }
     }
 }
+

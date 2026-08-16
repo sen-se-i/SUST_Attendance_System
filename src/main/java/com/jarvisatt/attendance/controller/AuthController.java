@@ -39,3 +39,4 @@ public class AuthController {
         authService.deleteUserByEmailOrRegistrationNo(target);
     }
 }
+

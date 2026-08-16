@@ -64,7 +64,7 @@ class AuthAndAttendanceServiceUnitTest {
         device.setInstallId("device-1");
 
         RegisterRequest request = new RegisterRequest("student@example.com", "password", Role.STUDENT, "REG-1", "device-1");
-        
+
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
@@ -77,7 +77,7 @@ class AuthAndAttendanceServiceUnitTest {
 
         var response = authService.register(request);
         assertThat(response.token()).isEqualTo("jwt-token");
-        // Should succeed and not throw error
+
         verify(deviceRepository, times(0)).save(any(Device.class));
     }
 
@@ -136,3 +136,4 @@ class AuthAndAttendanceServiceUnitTest {
                 .isEqualTo(HttpStatus.CONFLICT);
     }
 }
+

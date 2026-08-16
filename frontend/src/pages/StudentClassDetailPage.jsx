@@ -21,12 +21,11 @@ export default function StudentClassDetailPage() {
 
   const loadData = useCallback(async () => {
     try {
-      // 1. Load enrolled classes
+
       const classes = await api("/api/classes/enrolled");
       const found = classes.find((c) => c.id === classId);
       if (found) setClassInfo(found);
 
-      // 2. Load ALL conducted sessions for this class
       try {
         const sessions = await api(`/api/sessions/class/${classId}`);
         setSessionList(sessions);
@@ -34,12 +33,10 @@ export default function StudentClassDetailPage() {
         setSessionList([]);
       }
 
-      // 3. Load student's own attendance records
       const records = await api("/api/attendance/me");
       const filteredRecords = records.filter((r) => r.classId === classId);
       setMyRecords(filteredRecords);
 
-      // 4. Check active session for this class
       try {
         const active = await api(`/api/sessions/active?classId=${classId}`);
         setActiveSession(active);
@@ -89,21 +86,19 @@ export default function StudentClassDetailPage() {
     }
   }
 
-  // Calculate Accurate Stats based on total conducted sessions vs attended sessions
   const totalConducted = sessionList.length;
   const totalAttended = myRecords.length;
   const attendanceRate = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
 
   return (
     <div style={{ paddingBottom: 60 }}>
-      {/* Back Button */}
+
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={() => navigate("/student")}>
           <ArrowLeft size={15} /> Back to Dashboard
         </button>
       </div>
 
-      {/* Class Header Card */}
       {classInfo && (
         <div className="panel glass-panel" style={{ border: "1px solid #00E6FF", marginBottom: 18, padding: 18 }}>
           <span className="badge badge-success" style={{ marginBottom: 6, fontSize: "0.75rem", fontFamily: "monospace" }}>
@@ -123,7 +118,6 @@ export default function StudentClassDetailPage() {
         </div>
       )}
 
-      {/* Live GPS Attendance Claim Banner */}
       {activeSession ? (
         <div className="panel glass-panel" style={{ background: "rgba(0, 255, 136, 0.08)", border: "1px solid #00FF88", marginBottom: 18, padding: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -160,7 +154,6 @@ export default function StudentClassDetailPage() {
         </div>
       )}
 
-      {/* Attendance Summary Stats Box */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 18 }}>
         <div className="panel glass-panel" style={{ border: "1px solid #213042", textAlign: "center", padding: 12 }}>
           <span style={{ color: "#94a3b8", fontSize: "0.72rem", display: "block" }}>TOTAL SESSIONS CONDUCTED</span>
@@ -182,7 +175,6 @@ export default function StudentClassDetailPage() {
         </div>
       </div>
 
-      {/* Class Attendance Records Table */}
       <div className="panel glass-panel" style={{ border: "1px solid #213042", padding: 18 }}>
         <h2 style={{ fontSize: "1.1rem", marginBottom: 12 }}>
           <Calendar size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Class Session Log ({sessionList.length})

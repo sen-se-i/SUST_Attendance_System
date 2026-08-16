@@ -20,7 +20,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   bool _isLoading = false;
   ClassModel? _selectedClass;
 
-  // Selected Class details state
   List<AttendanceRecordModel> _classRecords = [];
   Map<String, List<AttendanceRecordModel>> _sessionGroups = {};
 
@@ -56,7 +55,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         _isLoading = false;
         if (res.isSuccess && res.data != null) {
           _classRecords = res.data!;
-          // Group by sessionId
+
           _sessionGroups = {};
           for (var r in _classRecords) {
             _sessionGroups.putIfAbsent(r.sessionId, () => []).add(r);
@@ -254,7 +253,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Class Header Card
+
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -283,7 +282,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Class History Sessions Table
           const Text('Class Session History', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           _sessionGroups.isEmpty
@@ -322,7 +320,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 ),
           const SizedBox(height: 24),
 
-          // Student Roster & Control
           const Text('Class Roster & Controls', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           students.isEmpty
@@ -467,7 +464,7 @@ class _CreateClassDialogState extends State<_CreateClassDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Department
+
             const Text('Department', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
             DropdownButton<String>(
               value: _department,
@@ -486,7 +483,6 @@ class _CreateClassDialogState extends State<_CreateClassDialog> {
             ),
             const SizedBox(height: 12),
 
-            // Session
             const Text('Academic Session (Format: YYYY-YY)', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
             TextField(
               controller: TextEditingController(text: _academicSession)..selection = TextSelection.collapsed(offset: _academicSession.length),
@@ -501,7 +497,6 @@ class _CreateClassDialogState extends State<_CreateClassDialog> {
             ),
             const SizedBox(height: 12),
 
-            // Semester
             const Text('Semester', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
             DropdownButton<String>(
               value: _semester,
@@ -520,7 +515,6 @@ class _CreateClassDialogState extends State<_CreateClassDialog> {
             ),
             const SizedBox(height: 12),
 
-            // Subject
             const Text('Subject', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
             if (_department != 'Software Engineering')
               Container(
@@ -670,9 +664,9 @@ class _StudentControlDialogState extends State<_StudentControlDialog> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Registration Number (Large)
+
           Text(widget.registrationNo, style: const TextStyle(color: Color(0xFF00E6FF), fontSize: 24, fontWeight: FontWeight.w900)),
-          // Class ID (Small)
+
           Text('CLASS ID: ${widget.classId}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
         ],
       ),
@@ -766,3 +760,4 @@ class _StudentControlDialogState extends State<_StudentControlDialog> {
     );
   }
 }
+

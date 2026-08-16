@@ -50,3 +50,4 @@ public class ClassSession {
     @Column(name = "radius_meters")
     private Double radiusMeters = 10.0;
 }
+

@@ -17,3 +17,4 @@ class HmacTokenServiceTest {
         assertThat(service.hash(token)).hasSize(64);
     }
 }
+

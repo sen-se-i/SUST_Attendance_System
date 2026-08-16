@@ -78,18 +78,15 @@ class AttendanceFlowIntegrationTest {
         Fixture fixtureB = fixture("studentB");
         String payloadA = activePayload(fixtureA);
 
-        // Student A marks attendance on "device-shared" -> registration successful
         var response = attendanceService.verify(new VerifyScanRequest(payloadA, "device-shared", null, null, 23.777176, 90.399452, 1.0, OffsetDateTime.now()), fixtureA.student());
         assertThat(response.registrationNo()).isEqualTo("REG-studentA");
 
-        // Student B tries to mark attendance on the same "device-shared" -> should be rejected with CONFLICT
         String payloadB = activePayload(fixtureB);
         assertThatThrownBy(() -> attendanceService.verify(new VerifyScanRequest(payloadB, "device-shared", null, null, 23.777176, 90.399452, 1.0, OffsetDateTime.now()), fixtureB.student()))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).status())
                 .isEqualTo(HttpStatus.CONFLICT);
 
-        // Student B tries to log in with "device-shared" -> should be rejected with CONFLICT
         assertThatThrownBy(() -> authService.login(new LoginRequest("student-studentB@example.com", "password", "device-shared")))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).status())
@@ -215,3 +212,4 @@ class AttendanceFlowIntegrationTest {
 
     private record Fixture(UserPrincipal student, com.jarvisatt.attendance.dto.SessionDtos.SessionResponse session) {}
 }
+

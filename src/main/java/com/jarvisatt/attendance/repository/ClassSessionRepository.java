@@ -22,3 +22,4 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
                             @Param("ended") ClassSessionStatus ended,
                             @Param("now") OffsetDateTime now);
 }
+

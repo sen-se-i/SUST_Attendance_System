@@ -122,7 +122,6 @@ export default function TeacherDashboard() {
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [busy, setBusy] = useState(false);
 
-  // Validation States
   const [sessionError, setSessionError] = useState("");
   const [duplicateError, setDuplicateError] = useState("");
 
@@ -138,7 +137,6 @@ export default function TeacherDashboard() {
     loadClasses();
   }, [loadClasses]);
 
-  // Update subject dropdown when Department or Semester changes
   useEffect(() => {
     const deptSubjects = SUBJECT_CATALOG[form.department] || {};
     const semSubjects = deptSubjects[form.semester] || [];
@@ -155,7 +153,6 @@ export default function TeacherDashboard() {
     }
   }, [form.department, form.semester]);
 
-  // Instant Session Format Check
   function handleSessionChange(value) {
     setForm((prev) => ({ ...prev, academicSession: value }));
     const sessionRegex = /^\d{4}-\d{2}$/;
@@ -167,7 +164,6 @@ export default function TeacherDashboard() {
     checkDuplicate(value, form.semester, form.subjectCode);
   }
 
-  // Instant Duplicate Check
   function checkDuplicate(sessionVal, semVal, codeVal) {
     if (!sessionVal || !semVal || !codeVal) {
       setDuplicateError("");
@@ -219,7 +215,7 @@ export default function TeacherDashboard() {
 
   return (
     <div style={{ paddingBottom: 100 }}>
-      {/* Top Header */}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
         <div>
           <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>Active Teacher Classes</h1>
@@ -230,7 +226,6 @@ export default function TeacherDashboard() {
         </button>
       </div>
 
-      {/* Active Classes Grid */}
       {classes.length === 0 ? (
         <div className="panel glass-panel" style={{ textAlign: "center", padding: "36px 18px", border: "1px dashed #213042" }}>
           <BookOpen size={40} color="#3B4D61" style={{ marginBottom: 10 }} />
@@ -261,11 +256,11 @@ export default function TeacherDashboard() {
                   CODE: {item.code}
                 </span>
               </div>
-              {/* Subject Name — primary, large */}
+
               <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff", margin: "0 0 3px" }}>
                 {item.subjectName || item.subjectCode}
               </h3>
-              {/* Subject Code + Session — secondary */}
+
               <p style={{ color: "#00E6FF", fontSize: "0.8rem", fontWeight: 600, margin: "0 0 10px" }}>
                 {item.subjectCode} &nbsp;•&nbsp; {item.academicSession} &nbsp;•&nbsp; {item.semester || ""}
               </p>
@@ -280,7 +275,6 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-      {/* Floating Bottom "+ CREATE" Button */}
       <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9000 }}>
         <button
           type="button"
@@ -301,14 +295,13 @@ export default function TeacherDashboard() {
         </button>
       </div>
 
-      {/* Create Class Modal */}
       {showCreateModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="panel glass-panel" style={{ width: "min(95vw, 560px)", border: "1px solid #00E6FF", maxHeight: "90vh", overflowY: "auto" }}>
             <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", marginBottom: 16 }}>Create New Class</h2>
 
             <form onSubmit={handleCreateClass}>
-              {/* Department Dropdown */}
+
               <div className="form-group" style={{ marginBottom: 14 }}>
                 <label className="form-label">Department</label>
                 <CustomSelect
@@ -318,7 +311,6 @@ export default function TeacherDashboard() {
                 />
               </div>
 
-              {/* Session Input (with YYYY-YY regex validation) */}
               <div className="form-group" style={{ marginBottom: 14 }}>
                 <label className="form-label">Academic Session (Format: YYYY-YY)</label>
                 <input
@@ -340,7 +332,6 @@ export default function TeacherDashboard() {
                 )}
               </div>
 
-              {/* Semester Dropdown */}
               <div className="form-group" style={{ marginBottom: 14 }}>
                 <label className="form-label">Semester</label>
                 <CustomSelect
@@ -354,7 +345,6 @@ export default function TeacherDashboard() {
                 />
               </div>
 
-              {/* Subject Dropdown */}
               <div className="form-group" style={{ marginBottom: 14 }}>
                 <label className="form-label">Subject</label>
                 {form.department !== "Software Engineering" ? (
@@ -408,3 +398,4 @@ export default function TeacherDashboard() {
     </div>
   );
 }
+

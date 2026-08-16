@@ -27,3 +27,4 @@ public interface QrTickRepository extends JpaRepository<QrTick, UUID> {
     @Query("update QrTick q set q.expiresAt = :now where q.id = :id and q.expiresAt > :now")
     int expireNow(@Param("id") UUID id, @Param("now") OffsetDateTime now);
 }
+

@@ -40,3 +40,4 @@ public class QrTick {
     @Column(name = "consumed_at")
     private OffsetDateTime consumedAt;
 }
+

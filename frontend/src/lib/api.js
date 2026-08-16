@@ -13,8 +13,6 @@ export function setToken(token) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
-// The backend runs on a free host that sleeps when idle and can take up to a
-// minute to wake, so allow a generous timeout before giving up.
 const REQUEST_TIMEOUT_MS = 90000;
 
 export async function api(path, options = {}) {
@@ -47,7 +45,7 @@ export async function api(path, options = {}) {
       const body = await response.json();
       message = body.message || message;
     } catch {
-      // response had no JSON body, keep default message
+
     }
     throw new ApiError(message);
   }
@@ -55,3 +53,4 @@ export async function api(path, options = {}) {
   const text = await response.text();
   return text ? JSON.parse(text) : null;
 }
+

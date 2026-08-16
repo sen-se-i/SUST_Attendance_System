@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
                 .orElse("Invalid request parameter");
         return response(HttpStatus.BAD_REQUEST, msg);
     }
-    
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ErrorResponse> conflict(DataIntegrityViolationException ex) {
         return response(HttpStatus.CONFLICT, "Request conflicts with existing data");
@@ -39,3 +39,4 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(new ErrorResponse(message, status.value(), OffsetDateTime.now()));
     }
 }
+

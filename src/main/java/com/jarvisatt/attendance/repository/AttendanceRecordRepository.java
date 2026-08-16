@@ -17,3 +17,4 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     void deleteBySessionId(UUID sessionId);
     void deleteByIdIn(List<UUID> ids);
 }
+

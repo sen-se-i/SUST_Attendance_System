@@ -35,3 +35,4 @@ public class ClassController {
         return classService.studentClasses(principal);
     }
 }
+

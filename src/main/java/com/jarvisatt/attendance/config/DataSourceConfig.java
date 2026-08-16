@@ -60,7 +60,7 @@ public class DataSourceConfig {
                 config.setDriverClassName("org.postgresql.Driver");
             }
         } else {
-            // Local H2 fallback with persistent file database
+
             config.setJdbcUrl("jdbc:h2:file:./data/jarvis_db;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;AUTO_SERVER=TRUE");
             config.setUsername("sa");
             config.setPassword("");
@@ -70,3 +70,4 @@ public class DataSourceConfig {
         return new HikariDataSource(config);
     }
 }
+

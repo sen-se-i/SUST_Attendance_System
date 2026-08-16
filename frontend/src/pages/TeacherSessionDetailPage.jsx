@@ -47,7 +47,7 @@ export default function TeacherSessionDetailPage() {
 
   return (
     <div style={{ paddingBottom: 60 }}>
-      {/* Back Button and Delete Button Toolbar */}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
         <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={() => navigate(`/teacher/class/${classId}`)}>
           <ArrowLeft size={15} /> Back to Class
@@ -63,7 +63,6 @@ export default function TeacherSessionDetailPage() {
         </button>
       </div>
 
-      {/* Header Info */}
       <div className="panel glass-panel" style={{ border: "1px solid #213042", marginBottom: 20, padding: 18 }}>
         <h1 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", marginBottom: 6 }}>
           Session Attendance Logs
@@ -77,7 +76,6 @@ export default function TeacherSessionDetailPage() {
         </div>
       </div>
 
-      {/* Verified Attendance List */}
       <div className="panel glass-panel" style={{ border: "1px solid #213042", padding: 18 }}>
         <h2 style={{ fontSize: "1.1rem", marginBottom: 14 }}>
           <CheckCircle2 size={18} color="#00FF88" style={{ verticalAlign: "middle", marginRight: 6 }} /> Attendance Records ({sessionRecords.length})
@@ -122,7 +120,6 @@ export default function TeacherSessionDetailPage() {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       {deleteModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="panel glass-panel" style={{ maxWidth: 400, width: "100%", border: "1px solid #ef4444", padding: 24 }}>
@@ -158,3 +155,4 @@ export default function TeacherSessionDetailPage() {
     </div>
   );
 }
+

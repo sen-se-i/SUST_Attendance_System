@@ -47,3 +47,4 @@ public class RosterController {
         return Map.of("status", "REMOVED");
     }
 }
+

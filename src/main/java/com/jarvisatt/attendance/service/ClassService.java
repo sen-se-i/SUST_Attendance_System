@@ -35,15 +35,13 @@ public class ClassService {
     public ClassResponse create(CreateClassRequest request, UserPrincipal teacher) {
         User owner = userRepository.findById(teacher.id()).orElseThrow();
 
-        // 1. Session format validation (YYYY-YY e.g. 2023-24)
         if (request.academicSession() == null || !request.academicSession().matches("^\\d{4}-\\d{2}$")) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Session must be in format YYYY-YY (e.g. 2023-24)");
         }
 
-        // 2. Duplicate Subject check for Session + Semester + Subject
         if (classRepository.existsByTeacherIdAndAcademicSessionAndSemesterAndSubjectCode(
                 teacher.id(), request.academicSession(), request.semester(), request.subjectCode())) {
-            throw new ApiException(HttpStatus.CONFLICT, 
+            throw new ApiException(HttpStatus.CONFLICT,
                 "Class already exists for subject " + request.subjectCode() + " in session " + request.academicSession() + " (" + request.semester() + ")");
         }
 
@@ -75,14 +73,8 @@ public class ClassService {
         return classRepository.findByTeacherId(teacher.id()).stream().map(this::response).toList();
     }
 
-    /**
-     * Generates a human-readable, structured class code:
-     * Format: <DEPT><SESSION>-<YEAR_SEM>-<COURSE_NUM>
-     * Example 1: Software Engineering, 2024-25, Year 1 Semester 2, EEE0712-1102W -> SWE2425-12-1102W
-     * Example 2: Software Engineering, 2023-24, Year 4 Semester 2, SWE0613-4125  -> SWE2324-42-4125
-     */
     private String generateClassCode(String department, String academicSession, String semester, String subjectCode) {
-        // 1. Department code
+
         String deptPrefix = "SWE";
         if (department != null) {
             String cleanDept = department.trim().toUpperCase();
@@ -102,14 +94,13 @@ public class ClassService {
             }
         }
 
-        // 2. Session code (e.g. "2024-25" -> "2425", "2023-24" -> "2324")
         String sessionPart = "2425";
         if (academicSession != null) {
             String digits = academicSession.replaceAll("\\D", "");
-            if (digits.length() == 6) { // e.g. 202425
-                sessionPart = digits.substring(2, 4) + digits.substring(4, 6); // "24" + "25" -> "2425"
-            } else if (digits.length() == 8) { // e.g. 20242025
-                sessionPart = digits.substring(2, 4) + digits.substring(6, 8); // "24" + "25" -> "2425"
+            if (digits.length() == 6) {
+                sessionPart = digits.substring(2, 4) + digits.substring(4, 6);
+            } else if (digits.length() == 8) {
+                sessionPart = digits.substring(2, 4) + digits.substring(6, 8);
             } else if (digits.length() >= 4) {
                 sessionPart = digits.substring(digits.length() - 4);
             } else if (!digits.isEmpty()) {
@@ -117,7 +108,6 @@ public class ClassService {
             }
         }
 
-        // 3. Year & Semester code (e.g. "Year 1 Semester 2" -> "12", "Year 4 Semester 2" -> "42")
         String semPart = "11";
         if (semester != null) {
             String digits = semester.replaceAll("\\D", "");
@@ -128,7 +118,6 @@ public class ClassService {
             }
         }
 
-        // 4. Course number from subject code (e.g. "EEE0712-1102W" -> "1102W", "SWE0613-4125" -> "4125")
         String coursePart = "0000";
         if (subjectCode != null && !subjectCode.isBlank()) {
             String cleanSubject = subjectCode.trim();
@@ -139,7 +128,6 @@ public class ClassService {
             }
         }
 
-        // Base code: e.g. SWE2425-12-1102W
         String baseCode = deptPrefix + sessionPart + "-" + semPart + "-" + coursePart;
         if (baseCode.length() > 28) {
             baseCode = baseCode.substring(0, 28);
@@ -184,3 +172,4 @@ public class ClassService {
         );
     }
 }
+

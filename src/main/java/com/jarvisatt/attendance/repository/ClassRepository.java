@@ -15,3 +15,4 @@ public interface ClassRepository extends JpaRepository<ClassEntity, UUID> {
     List<ClassEntity> findByTeacherId(UUID teacherId);
     boolean existsByTeacherIdAndAcademicSessionAndSemesterAndSubjectCode(UUID teacherId, String academicSession, String semester, String subjectCode);
 }
+

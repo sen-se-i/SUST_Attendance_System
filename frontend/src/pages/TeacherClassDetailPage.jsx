@@ -32,7 +32,6 @@ export default function TeacherClassDetailPage() {
   const [activeSession, setActiveSession] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // Student Control Modal State
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentHistory, setStudentHistory] = useState([]);
   const [showAdvance, setShowAdvance] = useState(false);
@@ -52,7 +51,6 @@ export default function TeacherClassDetailPage() {
       const records = await api(`/api/attendance/classes/${classId}`);
       setAttendanceRecords(records);
 
-      // Load ALL sessions from the dedicated endpoint (includes empty sessions)
       const sessions = await api(`/api/sessions/class/${classId}`);
       setHistorySessions(sessions);
     } catch (error) {
@@ -103,8 +101,6 @@ export default function TeacherClassDetailPage() {
     }
   }
 
-
-  // Open Student Control Modal
   async function openStudentModal(student) {
     setSelectedStudent(student);
     setShowAdvance(false);
@@ -118,7 +114,6 @@ export default function TeacherClassDetailPage() {
     }
   }
 
-  // Action: Reset Device ID
   async function handleResetDevice() {
     if (!selectedStudent) return;
     setBusy(true);
@@ -132,7 +127,6 @@ export default function TeacherClassDetailPage() {
     }
   }
 
-  // Delete Full History Confirm
   function confirmDeleteFullHistory() {
     setConfirmModal({
       open: true,
@@ -142,7 +136,6 @@ export default function TeacherClassDetailPage() {
     });
   }
 
-  // Delete Selected History Confirm
   function confirmDeleteSelectedHistory() {
     if (!selectedRecordIds.length) {
       notify("Please select at least one attendance record to delete", "danger");
@@ -198,14 +191,13 @@ export default function TeacherClassDetailPage() {
 
   return (
     <div style={{ paddingBottom: 60 }}>
-      {/* Back to Dashboard Bar */}
+
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={() => navigate("/teacher")}>
           <ArrowLeft size={15} /> Back to Dashboard
         </button>
       </div>
 
-      {/* Class Header Card */}
       {classInfo && (
         <div className="panel glass-panel" style={{ border: "1px solid #213042", marginBottom: 20, padding: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
@@ -230,7 +222,6 @@ export default function TeacherClassDetailPage() {
         </div>
       )}
 
-      {/* GPS Session Control Panel */}
       <SessionPanel
         session={activeSession}
         busy={busy}
@@ -239,7 +230,6 @@ export default function TeacherClassDetailPage() {
         onFinished={handleStopSession}
       />
 
-      {/* Class History Sessions Table */}
       <div className="panel glass-panel" style={{ marginTop: 20, border: "1px solid #213042", padding: 18 }}>
         <h2 style={{ fontSize: "1.15rem", marginBottom: 4 }}>
           <Calendar size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Class Session History
@@ -300,7 +290,6 @@ export default function TeacherClassDetailPage() {
         )}
       </div>
 
-      {/* Active Students Section */}
       <div className="panel glass-panel" style={{ marginTop: 20, border: "1px solid #213042", padding: 18 }}>
         <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>
           <Users size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Active Students ({enrolledStudents.length})
@@ -364,19 +353,17 @@ export default function TeacherClassDetailPage() {
         )}
       </div>
 
-      {/* Student Control Modal */}
       {selectedStudent && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
           <div className="panel glass-panel" style={{ width: "min(95vw, 620px)", maxHeight: "90vh", overflowY: "auto", border: "1px solid #00E6FF", padding: 20 }}>
             <div style={{ borderBottom: "1px solid #213042", paddingBottom: 10, marginBottom: 14 }}>
-              {/* Registration Number */}
+
               <h2 style={{ fontSize: "1.4rem", fontWeight: 900, color: "#00E6FF", margin: 0, letterSpacing: "0.5px" }}>
                 {selectedStudent.registrationNo}
               </h2>
               <p style={{ color: "#94a3b8", fontSize: "0.75rem", margin: "2px 0 0" }}>CLASS ID: {classId}</p>
             </div>
 
-            {/* Student Actions */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
               <button type="button" className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", color: "#00FF88", borderColor: "rgba(0, 255, 136, 0.4)" }} onClick={handleResetDevice} disabled={busy}>
                 <Smartphone size={14} /> Reset Device
@@ -424,7 +411,6 @@ export default function TeacherClassDetailPage() {
               </button>
             </div>
 
-            {/* Advance Deletion Panel */}
             {showAdvance && (
               <div style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
                 <h4 style={{ color: "#ef4444", margin: "0 0 6px", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: 6 }}>
@@ -458,7 +444,6 @@ export default function TeacherClassDetailPage() {
               </div>
             )}
 
-            {/* History Table */}
             <h4 style={{ color: "#ffffff", marginBottom: 10, fontSize: "0.95rem" }}>Student Attendance History</h4>
             {studentHistory.length === 0 ? (
               <div style={{ textAlign: "center", padding: "16px", color: "#94a3b8", fontSize: "0.82rem" }}>No attendance recorded for this student in this class.</div>
@@ -511,7 +496,6 @@ export default function TeacherClassDetailPage() {
         </div>
       )}
 
-      {/* Confirmation Warning Modal */}
       {confirmModal.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
           <div className="panel glass-panel" style={{ width: "min(90vw, 420px)", border: "2px solid #ef4444", textAlign: "center", padding: 22 }}>

@@ -1,6 +1,6 @@
-// Maximum GPS accuracy accepted by the backend (must match AttendanceService.requireValidAccuracy).
+
 const MAX_ACCEPTED_ACCURACY_METERS = 40;
-// Absolute minimum accuracy we ever request (for very small geofences).
+
 const MIN_TARGET_ACCURACY_METERS = 3;
 
 function getPosition(timeout = 5000, maximumAge = 2000) {
@@ -13,15 +13,6 @@ function getPosition(timeout = 5000, maximumAge = 2000) {
   });
 }
 
-/**
- * Captures high-precision GPS coordinates quickly within 1-2 seconds.
- *
- * Strategy:
- *  - Rapid sampling (up to 5 attempts with 200ms delay between attempts).
- *  - Early exit as soon as a strong fix is acquired (<= ideal target or <= 20m).
- *  - Hard reject only if GPS noise is too high (> min(40m, radius * 2)).
- *  - Generates a fresh timestamp at submission time so no expiration happens.
- */
 export async function captureCalibratedLocation(radiusMeters = 20) {
   if (!navigator.geolocation) {
     throw new Error("Geolocation is not supported by this device.");
@@ -29,7 +20,6 @@ export async function captureCalibratedLocation(radiusMeters = 20) {
 
   const radius = Math.max(5, Number(radiusMeters) || 20);
 
-  // Ideal target: half radius or at most 15m
   const idealAccuracyMeters = Math.min(
     MAX_ACCEPTED_ACCURACY_METERS,
     Math.max(MIN_TARGET_ACCURACY_METERS, Math.min(15, radius / 2)),
@@ -55,12 +45,10 @@ export async function captureCalibratedLocation(radiusMeters = 20) {
       best = position;
     }
 
-    // Early exit if we hit our target accuracy
     if (best.coords.accuracy <= idealAccuracyMeters) {
       break;
     }
 
-    // Early exit if accuracy is solid after a couple attempts
     if (attempt >= 2 && best.coords.accuracy <= Math.min(25, radius)) {
       break;
     }
@@ -77,7 +65,6 @@ export async function captureCalibratedLocation(radiusMeters = 20) {
     throw new Error("GPS did not report usable accuracy. Please try again.");
   }
 
-  // Hard reject if GPS is excessively noisy
   if (accuracyMeters > hardLimitMeters) {
     throw new Error(
       `GPS accuracy is ±${accuracyMeters.toFixed(1)}m — too weak for this ${radius}m session. ` +
@@ -89,7 +76,7 @@ export async function captureCalibratedLocation(radiusMeters = 20) {
     latitude: best.coords.latitude,
     longitude: best.coords.longitude,
     accuracyMeters,
-    capturedAt: new Date().toISOString(), // Always freshly generated timestamp
+    capturedAt: new Date().toISOString(),
   };
 }
 

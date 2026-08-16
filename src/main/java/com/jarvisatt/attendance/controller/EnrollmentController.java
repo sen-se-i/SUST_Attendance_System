@@ -23,3 +23,4 @@ public class EnrollmentController {
         return enrollmentService.joinDirect(request, principal);
     }
 }
+

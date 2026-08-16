@@ -10,3 +10,4 @@ export function ProtectedRoute({ role }) {
   }
   return <Outlet />;
 }
+

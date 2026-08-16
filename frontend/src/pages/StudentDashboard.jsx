@@ -50,7 +50,7 @@ export default function StudentDashboard() {
 
   return (
     <div style={{ paddingBottom: 100 }}>
-      {/* Header Bar */}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
         <div>
           <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>My Enrolled Classes</h1>
@@ -63,7 +63,6 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      {/* Enrolled Classes Grid */}
       {classes.length === 0 ? (
         <div className="panel glass-panel" style={{ textAlign: "center", padding: "36px 18px", border: "1px dashed #213042" }}>
           <BookOpen size={40} color="#3B4D61" style={{ marginBottom: 10 }} />
@@ -95,22 +94,18 @@ export default function StudentDashboard() {
                 </span>
               </div>
 
-              {/* Subject Name — primary, large */}
               <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff", margin: "0 0 3px" }}>
                 {item.subjectName || item.subjectCode}
               </h3>
 
-              {/* Subject Code + Session — secondary */}
               <p style={{ color: "#00E6FF", fontSize: "0.8rem", fontWeight: 600, margin: "0 0 4px" }}>
                 {item.subjectCode} &nbsp;•&nbsp; {item.academicSession} {item.semester ? `• ${item.semester}` : ""}
               </p>
 
-              {/* Teacher Name */}
               <p style={{ color: "#94a3b8", fontWeight: 600, fontSize: "0.8rem", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 5 }}>
                 <User size={13} /> {item.teacherName || "Faculty"}
               </p>
 
-              {/* Last Session Date */}
               <div style={{ background: "rgba(0, 230, 255, 0.06)", border: "1px solid #213042", padding: "6px 10px", borderRadius: 8, fontSize: "0.75rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={13} color="#00E6FF" />
                 <span>
@@ -129,7 +124,6 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* Floating Bottom "+ JOIN CLASS" Button */}
       <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9000 }}>
         <button
           type="button"
@@ -152,7 +146,6 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      {/* Join Class Modal */}
       {showJoinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="panel glass-panel" style={{ width: "min(95vw, 440px)", border: "1px solid #00E6FF" }}>
@@ -191,3 +184,4 @@ export default function StudentDashboard() {
     </div>
   );
 }
+

@@ -233,10 +233,7 @@ public class AttendanceService {
     }
 
     private static void requireCalibratedInsideRadius(double distanceMeters, double accuracyMeters, double radiusMeters) {
-        // ── Step 1: GPS quality gate ──────────────────────────────────────────────
-        // If accuracy is so bad that the GPS circle is larger than the entire geofence
-        // zone itself (2x), the reading is essentially useless — we can't trust the center.
-        // Already hard-capped at 40m upstream by requireValidAccuracy.
+
         double accuracyCeiling = Math.min(40.0, radiusMeters * 2.0);
         if (accuracyMeters > accuracyCeiling) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -246,14 +243,6 @@ public class AttendanceService {
                             accuracyMeters, radiusMeters));
         }
 
-        // ── Step 2: Center-inside check ───────────────────────────────────────────
-        // The reported GPS center must be inside the geofence zone.
-        // Accuracy is already quality-gated above, so the center is the best
-        // available estimate of where the student actually is.
-        //
-        // Why NOT (distance + accuracy <= radius)?
-        //   That conservative formula rejects boundary students even when they are
-        //   clearly inside the room — unacceptable false negatives for last-row seats.
         if (distanceMeters > radiusMeters) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
                     String.format(
@@ -360,3 +349,4 @@ public class AttendanceService {
         }
     }
 }
+

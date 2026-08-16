@@ -46,3 +46,4 @@ public class ClassEntity {
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }
+

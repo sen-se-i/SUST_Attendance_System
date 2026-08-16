@@ -1,42 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Color System - Sci-Fi Deep Black & Cyan / Vibrant Green Palette */
+
   --bg-base: #000000;
   --bg-surface: rgba(13, 21, 32, 0.78);
   --bg-surface-elevated: rgba(17, 28, 42, 0.9);
-  
+
   --primary: #00E6FF;
   --primary-hover: #00C8E0;
   --primary-glow: rgba(0, 230, 255, 0.3);
-  
+
   --secondary: #00FF88;
   --secondary-hover: #00E67A;
   --secondary-glow: rgba(0, 255, 136, 0.25);
-  
+
   --accent-cyan: #00FFFF;
   --accent-cyan-glow: rgba(0, 255, 255, 0.35);
-  
+
   --success: #00FF88;
   --success-glow: rgba(0, 255, 136, 0.2);
-  
+
   --warning: #F59E0B;
   --danger: #EF4444;
-  
+
   --text-primary: #FFFFFF;
   --text-secondary: #94A3B8;
   --text-muted: #64748B;
-  
+
   --border-light: #213042;
   --border-focus: #00E6FF;
   --border-subtle: #162232;
-  
-  /* Layout & Rounding */
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
-  
+
   --transition-fast: 0.15s ease;
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -54,7 +53,7 @@ body {
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 15%, rgba(0, 230, 255, 0.07) 0%, transparent 45%),
     radial-gradient(circle at 85% 85%, rgba(0, 255, 136, 0.05) 0%, transparent 45%),
     linear-gradient(to bottom, #000000, #04070D);
@@ -62,14 +61,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Typography headers */
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Outfit', sans-serif;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 
-/* Glassmorphism Classes */
 .glass-panel {
   background: var(--bg-surface);
   backdrop-filter: blur(16px);
@@ -93,7 +90,6 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-xl);
 }
 
-/* Interactive elements */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -149,7 +145,6 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
 }
 
-/* Inputs styling */
 .form-group {
   margin-bottom: 20px;
 }
@@ -195,7 +190,6 @@ h1, h2, h3, h4, h5, h6 {
   padding-right: 40px;
 }
 
-/* Tables styling */
 .custom-table-container {
   overflow-x: auto;
   border-radius: var(--radius-md);
@@ -235,14 +229,12 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(255, 255, 255, 0.01);
 }
 
-/* Cards & Layout Utilities */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
 }
 
-/* Status badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -270,7 +262,6 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -286,7 +277,6 @@ h1, h2, h3, h4, h5, h6 {
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -304,3 +294,4 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+

@@ -56,7 +56,6 @@ public class RosterService {
                 .toList();
     }
 
-    /** Removes a student from the class roster, enrollment, and purges their attendance records for this class. */
     @Transactional
     public void removeStudentFromClass(UUID classId, String registrationNo, UserPrincipal teacher) {
         classService.ownedClass(classId, teacher);
@@ -68,3 +67,4 @@ public class RosterService {
         });
     }
 }
+

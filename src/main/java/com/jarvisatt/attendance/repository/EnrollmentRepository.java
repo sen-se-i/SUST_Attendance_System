@@ -16,3 +16,4 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
     void deleteByStudentId(UUID studentId);
     void deleteByClassEntityIdAndStudentId(UUID classId, UUID studentId);
 }
+
