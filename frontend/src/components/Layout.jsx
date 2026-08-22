@@ -1,4 +1,5 @@
-import { LogOut } from "lucide-react";
+import { useState } from "react";
+import { LogOut, Menu } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 import { SideDrawer } from "./SideDrawer";
 
