@@ -38,9 +38,13 @@ public class SessionLifecycleService {
         double radiusMeters = request.radiusMeters() != null ? request.radiusMeters() : 10.0;
         double latitude = requireValidLatitude(request.latitude(), "Teacher latitude");
         double longitude = requireValidLongitude(request.longitude(), "Teacher longitude");
+        double accuracyMeters = requireValidAccuracy(request.accuracyMeters(), "Teacher GPS accuracy");
+        requireNonZeroCoordinates(latitude, longitude, "Teacher GPS location");
+        requireFreshCapture(request.capturedAt(), "Teacher GPS reading");
         if (radiusMeters <= 0 || radiusMeters > 500) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Radius must be between 1 and 500 meters");
         }
+        requireAccuracySuitableForRadius(accuracyMeters, radiusMeters, "Teacher GPS accuracy");
 
         ClassSession session = new ClassSession();
         session.setClassEntity(classEntity);
@@ -50,6 +54,7 @@ public class SessionLifecycleService {
         session.setTickIntervalSeconds(1);
         session.setLatitude(latitude);
         session.setLongitude(longitude);
+        session.setAccuracyMeters(accuracyMeters);
         session.setRadiusMeters(radiusMeters);
 
         classSessionRepository.saveAndFlush(session);
@@ -84,6 +89,7 @@ public class SessionLifecycleService {
                 session.getStatus().name(),
                 session.getLatitude(),
                 session.getLongitude(),
+                session.getAccuracyMeters(),
                 session.getRadiusMeters(),
                 startedAt,
                 expiresAt
@@ -102,5 +108,33 @@ public class SessionLifecycleService {
             throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between -180 and 180");
         }
         return longitude;
+    }
+
+    private static void requireNonZeroCoordinates(Double latitude, Double longitude, String label) {
+        if (latitude != null && longitude != null && Math.abs(latitude) < 0.000001 && Math.abs(longitude) < 0.000001) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " returned invalid (0,0) coordinates. Please enable device location / GPS and try again.");
+        }
+    }
+
+    private static double requireValidAccuracy(Double accuracyMeters, String label) {
+        if (accuracyMeters == null || !Double.isFinite(accuracyMeters) || accuracyMeters <= 0.0 || accuracyMeters > 100.0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between 0 and 100 meters");
+        }
+        return accuracyMeters;
+    }
+
+    private static void requireFreshCapture(OffsetDateTime capturedAt, String label) {
+        OffsetDateTime now = OffsetDateTime.now();
+        if (capturedAt == null || capturedAt.isBefore(now.minusSeconds(15)) || capturedAt.isAfter(now.plusSeconds(30))) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " must be freshly captured within the last 15 seconds");
+        }
+    }
+
+    private static void requireAccuracySuitableForRadius(double accuracyMeters, double radiusMeters, String label) {
+        double maxAllowedAccuracy = Math.max(3.0, radiusMeters);
+        if (accuracyMeters > maxAllowedAccuracy) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    String.format("%s is %.1fm, which is too weak for a %.1fm geofence. Wait for a stronger GPS fix and try again.", label, accuracyMeters, radiusMeters));
+        }
     }
 }

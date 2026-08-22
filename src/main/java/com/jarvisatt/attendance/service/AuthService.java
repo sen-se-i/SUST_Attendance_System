@@ -2,9 +2,11 @@ package com.jarvisatt.attendance.service;
 
 import com.jarvisatt.attendance.domain.Role;
 import com.jarvisatt.attendance.domain.User;
+import com.jarvisatt.attendance.domain.Device;
 import com.jarvisatt.attendance.dto.AuthDtos.*;
 import com.jarvisatt.attendance.exception.ApiException;
 import com.jarvisatt.attendance.repository.UserRepository;
+import com.jarvisatt.attendance.repository.DeviceRepository;
 import com.jarvisatt.attendance.security.JwtService;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +15,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
+    private final DeviceRepository deviceRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -34,16 +40,52 @@ public class AuthService {
         user.setRole(request.role());
         user.setRegistrationNo(request.role() == Role.STUDENT ? request.registrationNo().trim() : null);
         userRepository.save(user);
+
+        if (request.role() == Role.STUDENT && request.deviceInstallId() != null && !request.deviceInstallId().isBlank()) {
+            Optional<Device> existingDevice = deviceRepository.findByInstallId(request.deviceInstallId());
+            if (existingDevice.isPresent()) {
+                User registeredStudent = existingDevice.get().getStudent();
+                if (!registeredStudent.getId().equals(user.getId())) {
+                    throw new ApiException(HttpStatus.CONFLICT,
+                            "This device is already registered to another student (" + registeredStudent.getRegistrationNo() + "). Sharing devices is not allowed.");
+                }
+            } else {
+                Device device = new Device();
+                device.setStudent(user);
+                device.setInstallId(request.deviceInstallId());
+                device.setLastSeen(OffsetDateTime.now());
+                deviceRepository.save(device);
+            }
+        }
+
         return authResponse(user);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email().trim().toLowerCase())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
+
+        if (user.getRole() == Role.STUDENT && request.deviceInstallId() != null && !request.deviceInstallId().isBlank()) {
+            Optional<Device> existingDevice = deviceRepository.findByInstallId(request.deviceInstallId());
+            if (existingDevice.isPresent()) {
+                User registeredStudent = existingDevice.get().getStudent();
+                if (!registeredStudent.getId().equals(user.getId())) {
+                    throw new ApiException(HttpStatus.CONFLICT,
+                            "This device is already registered to another student (" + registeredStudent.getRegistrationNo() + "). Sharing devices is not allowed.");
+                }
+            } else {
+                Device device = new Device();
+                device.setStudent(user);
+                device.setInstallId(request.deviceInstallId());
+                device.setLastSeen(OffsetDateTime.now());
+                deviceRepository.save(device);
+            }
+        }
+
         return authResponse(user);
     }
 

@@ -3,6 +3,7 @@ package com.jarvisatt.attendance.dto;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
+import java.time.OffsetDateTime;
 
 public final class SessionDtos {
     private SessionDtos() {}
@@ -11,6 +12,8 @@ public final class SessionDtos {
             @NotNull UUID classId,
             Double latitude,
             Double longitude,
+            Double accuracyMeters,
+            OffsetDateTime capturedAt,
             Double radiusMeters,
             Integer totalTicks,
             Integer intervalSeconds
@@ -22,9 +25,10 @@ public final class SessionDtos {
             String status,
             Double latitude,
             Double longitude,
+            Double accuracyMeters,
             Double radiusMeters,
-            java.time.OffsetDateTime startedAt,
-            java.time.OffsetDateTime expiresAt
+            OffsetDateTime startedAt,
+            OffsetDateTime expiresAt
     ) {}
 
     public record CurrentTickResponse(
@@ -32,9 +36,10 @@ public final class SessionDtos {
             Integer tickIndex,
             String qrPayload,
             String status,
-            java.time.OffsetDateTime expiresAt,
+            OffsetDateTime expiresAt,
             Double latitude,
             Double longitude,
+            Double accuracyMeters,
             Double radiusMeters
     ) {}
 }

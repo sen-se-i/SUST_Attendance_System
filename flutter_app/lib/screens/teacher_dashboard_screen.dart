@@ -22,7 +22,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   ClassModel? _selectedClass;
   SessionModel? _activeSession;
   List<AttendanceRecordModel> _sessionRecords = [];
-  double _selectedRadius = 10.0;
+  double _selectedRadius = 20.0;
   bool _isLoadingClasses = true;
   bool _isStartingSession = false;
   Timer? _timer;
@@ -108,7 +108,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     setState(() => _isStartingSession = true);
 
     // Get teacher's current GPS position
-    final loc = await LocationService.getCurrentLocation();
+    final loc = await LocationService.getCurrentLocation(radiusMeters: _selectedRadius);
     if (loc.error != null) {
       setState(() => _isStartingSession = false);
       if (!mounted) return;
@@ -124,6 +124,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       classId: _selectedClass!.id,
       latitude: loc.latitude,
       longitude: loc.longitude,
+      accuracyMeters: loc.accuracyMeters,
+      capturedAt: loc.capturedAt,
       radiusMeters: _selectedRadius,
     );
 
@@ -139,7 +141,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('GPS Session Started! Radius: ${_selectedRadius.toInt()}m'),
+          content: Text('GPS Session Started! Radius: ${_selectedRadius.toInt()}m, accuracy: +/-${loc.accuracyMeters.toStringAsFixed(1)}m'),
           backgroundColor: Colors.green,
         ),
       );
@@ -169,13 +171,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     final auth = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFF000000),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF181829),
+        backgroundColor: const Color(0xFF0D1520),
         elevation: 0,
         title: Row(
           children: const [
-            Icon(Icons.radar, color: Color(0xFF818CF8)),
+            Icon(Icons.radar, color: Color(0xFF00E6FF)),
             SizedBox(width: 8),
             Text(
               'SWE-Attendance (Teacher)',
@@ -191,7 +193,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         ],
       ),
       body: _isLoadingClasses
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00E6FF)))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -201,16 +203,16 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF181829),
+                      color: const Color(0xFF0D1520),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF2D2D44)),
+                      border: Border.all(color: const Color(0xFF213042)),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<ClassModel>(
                         value: _selectedClass,
-                        dropdownColor: const Color(0xFF181829),
+                        dropdownColor: const Color(0xFF0D1520),
                         isExpanded: true,
-                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF818CF8)),
+                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF00E6FF)),
                         items: _classes.map((c) {
                           return DropdownMenuItem<ClassModel>(
                             value: c,
@@ -260,7 +262,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6366F1),
+                          backgroundColor: const Color(0xFF00E6FF),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                       ),
@@ -274,7 +276,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
                         ),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF6366F1)),
+                        border: Border.all(color: const Color(0xFF00E6FF)),
                       ),
                       child: Column(
                         children: [
@@ -368,12 +370,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF25253A),
+                          color: const Color(0xFF162232),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${_sessionRecords.length} Present',
-                          style: const TextStyle(color: Color(0xFF818CF8), fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Color(0xFF00E6FF), fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -385,7 +387,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       padding: const EdgeInsets.all(32),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF181829),
+                        color: const Color(0xFF0D1520),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
@@ -410,9 +412,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF181829),
+                            color: const Color(0xFF0D1520),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF2D2D44)),
+                            border: Border.all(color: const Color(0xFF213042)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -420,8 +422,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                               Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor: const Color(0xFF6366F1).withOpacity(0.2),
-                                    child: const Icon(Icons.person_rounded, color: Color(0xFF818CF8)),
+                                    backgroundColor: const Color(0xFF00E6FF).withOpacity(0.2),
+                                    child: const Icon(Icons.person_rounded, color: Color(0xFF00E6FF)),
                                   ),
                                   const SizedBox(width: 12),
                                   Column(

@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math';
 import '../models/user_model.dart';
 import '../models/class_model.dart';
 import '../models/session_model.dart';
@@ -23,6 +25,18 @@ class ApiService {
 
   static set baseUrl(String url) => _customBaseUrl = url;
 
+  static Future<String> getDeviceInstallId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? id = prefs.getString('jarvisatt.deviceInstallId');
+    if (id == null) {
+      final random = Random.secure();
+      final values = List<int>.generate(16, (i) => random.nextInt(256));
+      id = 'flutter-web-' + values.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      await prefs.setString('jarvisatt.deviceInstallId', id);
+    }
+    return id;
+  }
+
   static Map<String, String> _headers(String? token) {
     Map<String, String> headers = {
       'Content-Type': 'application/json',
@@ -33,12 +47,16 @@ class ApiService {
     return headers;
   }
 
-  static Future<ApiResponse<UserModel>> login(String email, String password) async {
+  static Future<ApiResponse<UserModel>> login(String email, String password, {String? deviceInstallId}) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/login'),
         headers: _headers(null),
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          if (deviceInstallId != null) 'deviceInstallId': deviceInstallId,
+        }),
       );
 
       if (response.statusCode == 200) {
@@ -61,6 +79,7 @@ class ApiService {
     required String password,
     required String role,
     String? registrationNo,
+    String? deviceInstallId,
   }) async {
     try {
       final response = await http.post(
@@ -71,11 +90,12 @@ class ApiService {
           'password': password,
           'role': role,
           'registrationNo': registrationNo,
+          if (deviceInstallId != null) 'deviceInstallId': deviceInstallId,
         }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return login(email, password);
+        return login(email, password, deviceInstallId: deviceInstallId);
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse(isSuccess: false, message: error['message'] ?? 'Registration failed');
@@ -110,6 +130,8 @@ class ApiService {
     required String classId,
     required double latitude,
     required double longitude,
+    required double accuracyMeters,
+    required DateTime capturedAt,
     required double radiusMeters,
   }) async {
     try {
@@ -120,6 +142,8 @@ class ApiService {
           'classId': classId,
           'latitude': latitude,
           'longitude': longitude,
+          'accuracyMeters': accuracyMeters,
+          'capturedAt': capturedAt.toUtc().toIso8601String(),
           'radiusMeters': radiusMeters,
           'totalTicks': 150,
           'intervalSeconds': 1,
@@ -174,6 +198,8 @@ class ApiService {
     required String sessionId,
     required double latitude,
     required double longitude,
+    required double accuracyMeters,
+    required DateTime capturedAt,
     required String deviceInstallId,
   }) async {
     try {
@@ -184,6 +210,8 @@ class ApiService {
           'sessionId': sessionId,
           'latitude': latitude,
           'longitude': longitude,
+          'accuracyMeters': accuracyMeters,
+          'capturedAt': capturedAt.toUtc().toIso8601String(),
           'deviceInstallId': deviceInstallId,
         }),
       );

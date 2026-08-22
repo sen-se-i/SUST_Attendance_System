@@ -10,16 +10,16 @@ class RadiusSliderWidget extends StatelessWidget {
     required this.onChanged,
   }) : super(key: key);
 
-  static const List<double> presetRadii = [5.0, 10.0, 20.0, 50.0, 100.0];
+  static const List<double> presetRadii = [20.0, 50.0, 100.0];
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2D),
+        color: const Color(0xFF0D1520),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF2D2D44)),
+        border: Border.all(color: const Color(0xFF213042)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
@@ -36,7 +36,7 @@ class RadiusSliderWidget extends StatelessWidget {
             children: [
               Row(
                 children: const [
-                  Icon(Icons.radar_rounded, color: Color(0xFF6366F1), size: 20),
+                  Icon(Icons.radar_rounded, color: Color(0xFF00E6FF), size: 20),
                   SizedBox(width: 8),
                   Text(
                     'Geofence Radius',
@@ -52,7 +52,7 @@ class RadiusSliderWidget extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF6366F1), Color(0xFF818CF8)],
+                    colors: [Color(0xFF00E6FF), Color(0xFF00E6FF)],
                   ),
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -70,17 +70,17 @@ class RadiusSliderWidget extends StatelessWidget {
           const SizedBox(height: 12),
           SliderTheme(
             data: SliderThemeData(
-              activeTrackColor: const Color(0xFF6366F1),
-              inactiveTrackColor: const Color(0xFF2D2D44),
-              thumbColor: const Color(0xFF818CF8),
-              overlayColor: const Color(0xFF6366F1).withOpacity(0.2),
+              activeTrackColor: const Color(0xFF00E6FF),
+              inactiveTrackColor: const Color(0xFF213042),
+              thumbColor: const Color(0xFF00E6FF),
+              overlayColor: const Color(0xFF00E6FF).withOpacity(0.2),
               valueIndicatorTextStyle: const TextStyle(color: Colors.white),
             ),
             child: Slider(
               value: selectedRadius,
-              min: 5.0,
+              min: 20.0,
               max: 100.0,
-              divisions: 19,
+              divisions: 16,
               label: '${selectedRadius.toInt()}m',
               onChanged: onChanged,
             ),
@@ -96,10 +96,10 @@ class RadiusSliderWidget extends StatelessWidget {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF6366F1) : const Color(0xFF141422),
+                    color: isSelected ? const Color(0xFF00E6FF) : const Color(0xFF070B12),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF818CF8) : const Color(0xFF2D2D44),
+                      color: isSelected ? const Color(0xFF00E6FF) : const Color(0xFF213042),
                     ),
                   ),
                   child: Text(

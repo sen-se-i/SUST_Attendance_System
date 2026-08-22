@@ -44,6 +44,9 @@ public class ClassSession {
     @Column(name = "longitude")
     private Double longitude;
 
+    @Column(name = "accuracy_meters")
+    private Double accuracyMeters;
+
     @Column(name = "radius_meters")
     private Double radiusMeters = 10.0;
 }

@@ -32,27 +32,26 @@ public class DataInitializer implements CommandLineRunner {
                 .orElseGet(() -> {
                     User u = new User();
                     u.setEmail("teacher@example.com");
-                    u.setPasswordHash(passwordEncoder.encode("password"));
                     u.setRole(Role.ADMIN);
-                    return userRepository.save(u);
+                    return u;
                 });
+        teacher.setPasswordHash(passwordEncoder.encode("password"));
+        teacher.setRole(Role.ADMIN);
+        teacher = userRepository.save(teacher);
 
         // 2. Seed Student (ch.wixard@student.sust.edu)
         User student = userRepository.findByEmail("ch.wixard@student.sust.edu")
                 .orElseGet(() -> {
                     User u = new User();
                     u.setEmail("ch.wixard@student.sust.edu");
-                    u.setPasswordHash(passwordEncoder.encode("password"));
                     u.setRole(Role.STUDENT);
-                    u.setRegistrationNo("2023831001");
-                    return userRepository.save(u);
+                    return u;
                 });
+        student.setPasswordHash(passwordEncoder.encode("password"));
+        student.setRole(Role.STUDENT);
+        student.setRegistrationNo("2023831001");
+        student = userRepository.save(student);
 
-        // Ensure student registration number is set
-        if (student.getRegistrationNo() == null || student.getRegistrationNo().isBlank()) {
-            student.setRegistrationNo("2023831001");
-            userRepository.save(student);
-        }
 
         // 3. Seed Demo Class if teacher has no classes
         List<ClassEntity> teacherClasses = classRepository.findByTeacherId(teacher.getId());

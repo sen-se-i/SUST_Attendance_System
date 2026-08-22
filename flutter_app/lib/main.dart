@@ -23,20 +23,20 @@ class SweAttendanceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SWE-Attendance',
+      title: 'SWE Attendance System',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F0F1A),
-        primaryColor: const Color(0xFF6366F1),
+        scaffoldBackgroundColor: const Color(0xFF000000),
+        primaryColor: const Color(0xFF00E6FF),
         textTheme: GoogleFonts.interTextTheme(
           ThemeData.dark().textTheme,
         ),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF6366F1),
-          secondary: Color(0xFF38BDF8),
-          surface: Color(0xFF181829),
-          background: Color(0xFF0F0F1A),
+          primary: Color(0xFF00E6FF),
+          secondary: Color(0xFF00FF88),
+          surface: Color(0xFF0D1520),
+          background: Color(0xFF000000),
         ),
       ),
       home: Consumer<AuthProvider>(

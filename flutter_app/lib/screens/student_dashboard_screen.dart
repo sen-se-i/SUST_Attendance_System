@@ -105,7 +105,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     setState(() => _isClaiming = true);
 
     // Get phone's current GPS location
-    final loc = await LocationService.getCurrentLocation();
+    final loc = await LocationService.getCurrentLocation(radiusMeters: _activeSession!.radiusMeters);
     if (loc.error != null) {
       setState(() => _isClaiming = false);
       if (!mounted) return;
@@ -115,13 +115,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       return;
     }
 
+    final deviceId = await ApiService.getDeviceInstallId();
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final response = await ApiService.claimAttendance(
       token: auth.currentUser!.token,
       sessionId: _activeSession!.sessionId,
       latitude: loc.latitude,
       longitude: loc.longitude,
-      deviceInstallId: 'flutter-device-id-${auth.currentUser!.id.substring(0, 8)}',
+      accuracyMeters: loc.accuracyMeters,
+      capturedAt: loc.capturedAt,
+      deviceInstallId: deviceId,
     );
 
     setState(() => _isClaiming = false);
@@ -155,13 +158,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     final auth = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFF000000),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF181829),
+        backgroundColor: const Color(0xFF0D1520),
         elevation: 0,
         title: Row(
           children: const [
-            Icon(Icons.location_on, color: Color(0xFF38BDF8)),
+            Icon(Icons.location_on, color: Color(0xFF00E6FF)),
             SizedBox(width: 8),
             Text(
               'SWE-Attendance (Student)',
@@ -171,7 +174,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF818CF8)),
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF00E6FF)),
             onPressed: () {
               _checkActiveSession();
               _loadHistory();
@@ -184,7 +187,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         ],
       ),
       body: _isLoadingClasses
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00E6FF)))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -194,16 +197,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF181829),
+                      color: const Color(0xFF0D1520),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF2D2D44)),
+                      border: Border.all(color: const Color(0xFF213042)),
                     ),
                     child: Row(
                       children: [
                         CircleAvatar(
                           radius: 24,
-                          backgroundColor: const Color(0xFF38BDF8).withOpacity(0.2),
-                          child: const Icon(Icons.badge, color: Color(0xFF38BDF8)),
+                          backgroundColor: const Color(0xFF00E6FF).withOpacity(0.2),
+                          child: const Icon(Icons.badge, color: Color(0xFF00E6FF)),
                         ),
                         const SizedBox(width: 14),
                         Column(
@@ -234,16 +237,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF181829),
+                        color: const Color(0xFF0D1520),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF2D2D44)),
+                        border: Border.all(color: const Color(0xFF213042)),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<ClassModel>(
                           value: _selectedClass,
-                          dropdownColor: const Color(0xFF181829),
+                          dropdownColor: const Color(0xFF0D1520),
                           isExpanded: true,
-                          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF818CF8)),
+                          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF00E6FF)),
                           items: _classes.map((c) {
                             return DropdownMenuItem<ClassModel>(
                               value: c,
@@ -275,10 +278,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
                         ),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF6366F1)),
+                        border: Border.all(color: const Color(0xFF00E6FF)),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6366F1).withOpacity(0.3),
+                            color: const Color(0xFF00E6FF).withOpacity(0.3),
                             blurRadius: 15,
                             spreadRadius: 2,
                           ),
@@ -384,9 +387,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       padding: const EdgeInsets.all(28),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF181829),
+                        color: const Color(0xFF0D1520),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF2D2D44)),
+                        border: Border.all(color: const Color(0xFF213042)),
                       ),
                       child: Column(
                         children: [
@@ -423,12 +426,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF25253A),
+                          color: const Color(0xFF162232),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${_myHistory.length} Sessions',
-                          style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Color(0xFF00E6FF), fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -440,7 +443,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       padding: const EdgeInsets.all(28),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF181829),
+                        color: const Color(0xFF0D1520),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: const Text('No attendance history found.', style: TextStyle(color: Colors.grey)),
@@ -456,9 +459,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF181829),
+                            color: const Color(0xFF0D1520),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF2D2D44)),
+                            border: Border.all(color: const Color(0xFF213042)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,

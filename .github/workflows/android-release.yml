@@ -38,6 +38,27 @@ jobs:
         working-directory: flutter_app
         run: flutter create --no-pub --platforms=android . || true
 
+      - name: Customize Flutter App Name and Icon
+        run: |
+          # Copy custom launcher icons from capacitor project to flutter project
+          cp -r frontend/android/app/src/main/res/mipmap-* flutter_app/android/app/src/main/res/
+          
+          # Replace application label in AndroidManifest.xml
+          python3 -c "
+          import os, re
+          manifest_path = 'flutter_app/android/app/src/main/AndroidManifest.xml'
+          if os.path.exists(manifest_path):
+              with open(manifest_path, 'r', encoding='utf-8') as f:
+                  content = f.read()
+              # Replace label matching any android:label
+              content = re.sub(r'android:label=\"[^\"]+\"', 'android:label=\"SWE Attendance System\"', content)
+              with open(manifest_path, 'w', encoding='utf-8') as f:
+                  f.write(content)
+              print('Successfully customized Flutter AndroidManifest.xml')
+          else:
+              print('AndroidManifest.xml not found!')
+          "
+
       - name: Install Flutter dependencies
         working-directory: flutter_app
         run: flutter pub get || true

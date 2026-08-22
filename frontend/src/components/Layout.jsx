@@ -1,4 +1,4 @@
-import { LogOut, MapPin } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 
 export function Layout({ children }) {
@@ -8,11 +8,10 @@ export function Layout({ children }) {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <img src="/logo.png" alt="SWE-Attendance Logo" style={{ width: 32, height: 32, objectFit: "contain" }} />
           <div>
-            <h1>SWE-Attendance</h1>
+            <h1>SWE Attendance System</h1>
             <p className="subtitle">
-              {user ? `${user.role === "ADMIN" ? "Teacher" : "Student"} console` : "GPS Location Geofence Attendance"}
+              {user ? `${user.role === "ADMIN" ? "Teacher" : "Student"} Console` : "GPS Location Attendance"}
             </p>
           </div>
         </div>
@@ -26,3 +25,4 @@ export function Layout({ children }) {
     </div>
   );
 }
+

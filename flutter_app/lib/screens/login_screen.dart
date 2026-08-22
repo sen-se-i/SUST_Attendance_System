@@ -57,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFF000000),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -70,12 +70,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF181829),
+                    color: const Color(0xFF0D1520),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF38BDF8).withOpacity(0.4),
+                        color: const Color(0xFF00E6FF).withOpacity(0.35),
                         blurRadius: 20,
-                        spreadRadius: 4,
+                        spreadRadius: 3,
                       ),
                     ],
                   ),
@@ -91,12 +91,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 16),
                 ShaderMask(
                   shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFF818CF8), Color(0xFF38BDF8)],
+                    colors: [Color(0xFF00E6FF), Color(0xFF00FF88)],
                   ).createShader(bounds),
                   child: const Text(
-                    'SWE-Attendance',
+                    'SWE Attendance System',
                     style: TextStyle(
-                      fontSize: 30,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       letterSpacing: 1.2,
@@ -118,9 +118,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF181829),
+                    color: const Color(0xFF0D1520),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF2D2D44)),
+                    border: Border.all(color: const Color(0xFF213042)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAlignment.start,
@@ -142,12 +142,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           labelText: 'Email Address',
                           labelStyle: TextStyle(color: Colors.grey[400]),
-                          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF818CF8)),
+                          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF00E6FF)),
                           filled: true,
-                          fillColor: const Color(0xFF0F0F1A),
+                          fillColor: const Color(0xFF070B12),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                            borderSide: const BorderSide(color: Color(0xFF213042)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF213042)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF00E6FF)),
                           ),
                         ),
                       ),
@@ -161,12 +169,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           labelText: 'Password',
                           labelStyle: TextStyle(color: Colors.grey[400]),
-                          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF818CF8)),
+                          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF00E6FF)),
                           filled: true,
-                          fillColor: const Color(0xFF0F0F1A),
+                          fillColor: const Color(0xFF070B12),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                            borderSide: const BorderSide(color: Color(0xFF213042)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF213042)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF00E6FF)),
                           ),
                         ),
                       ),
@@ -175,17 +191,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (!_isLogin) ...[
                         DropdownButtonFormField<String>(
                           value: _selectedRole,
-                          dropdownColor: const Color(0xFF181829),
+                          dropdownColor: const Color(0xFF0D1520),
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             labelText: 'Account Role',
                             labelStyle: TextStyle(color: Colors.grey[400]),
-                            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF818CF8)),
+                            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF00E6FF)),
                             filled: true,
-                            fillColor: const Color(0xFF0F0F1A),
+                            fillColor: const Color(0xFF070B12),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
+                              borderSide: const BorderSide(color: Color(0xFF213042)),
                             ),
                           ),
                           items: const [
@@ -204,12 +220,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: InputDecoration(
                               labelText: 'Registration Number',
                               labelStyle: TextStyle(color: Colors.grey[400]),
-                              prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF818CF8)),
+                              prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF00E6FF)),
                               filled: true,
-                              fillColor: const Color(0xFF0F0F1A),
+                              fillColor: const Color(0xFF070B12),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+                                borderSide: const BorderSide(color: Color(0xFF213042)),
                               ),
                             ),
                           ),
@@ -224,8 +240,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           runSpacing: 8,
                           children: [
                             ActionChip(
-                              backgroundColor: const Color(0xFF25253A),
-                              avatar: const Icon(Icons.school, size: 16, color: Color(0xFF38BDF8)),
+                              backgroundColor: const Color(0xFF162232),
+                              avatar: const Icon(Icons.school, size: 16, color: Color(0xFF00E6FF)),
                               label: const Text('Teacher Demo', style: TextStyle(color: Colors.white, fontSize: 11)),
                               onPressed: () {
                                 _emailController.text = 'teacher@example.com';
@@ -233,8 +249,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                             ),
                             ActionChip(
-                              backgroundColor: const Color(0xFF25253A),
-                              avatar: const Icon(Icons.person, size: 16, color: Color(0xFF818CF8)),
+                              backgroundColor: const Color(0xFF162232),
+                              avatar: const Icon(Icons.person, size: 16, color: Color(0xFF00FF88)),
                               label: const Text('Student Demo', style: TextStyle(color: Colors.white, fontSize: 11)),
                               onPressed: () {
                                 _emailController.text = 'ch.wixard@student.sust.edu';
@@ -253,7 +269,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: ElevatedButton(
                           onPressed: auth.isLoading ? null : _submit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6366F1),
+                            backgroundColor: const Color(0xFF00E6FF),
+                            foregroundColor: const Color(0xFF030712),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -262,14 +279,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? const SizedBox(
                                   width: 24,
                                   height: 24,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  child: CircularProgressIndicator(color: Color(0xFF030712), strokeWidth: 2),
                                 )
                               : Text(
                                   _isLogin ? 'Sign In' : 'Register Account',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: Color(0xFF030712),
                                   ),
                                 ),
                         ),
@@ -283,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             _isLogin
                                 ? "Don't have an account? Register"
                                 : 'Already have an account? Sign In',
-                            style: const TextStyle(color: Color(0xFF818CF8)),
+                            style: const TextStyle(color: Color(0xFF00E6FF)),
                           ),
                         ),
                       ),

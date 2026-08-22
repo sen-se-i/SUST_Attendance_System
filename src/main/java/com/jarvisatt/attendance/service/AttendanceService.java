@@ -13,7 +13,6 @@ import com.jarvisatt.attendance.session.CurrentTick;
 import com.jarvisatt.attendance.session.SessionEngine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
@@ -24,6 +23,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -75,9 +75,12 @@ public class AttendanceService {
         double teacherLon = requireValidLongitude(session.getLongitude(), "Session longitude");
         double studentLat = requireValidLatitude(request.latitude(), "Student latitude");
         double studentLon = requireValidLongitude(request.longitude(), "Student longitude");
+        double studentAccuracyMeters = requireValidAccuracy(request.accuracyMeters(), "Student GPS accuracy");
         double maxRadius = session.getRadiusMeters() != null ? session.getRadiusMeters() : 10.0;
+        requireFreshCapture(request.capturedAt(), "Student GPS reading");
 
         double distanceMeters = calculateHaversineDistance(teacherLat, teacherLon, studentLat, studentLon);
+        requireCalibratedInsideRadius(distanceMeters, studentAccuracyMeters, maxRadius);
 
         if (distanceMeters > maxRadius) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -92,24 +95,25 @@ public class AttendanceService {
         record.setLatitude(studentLat);
         record.setLongitude(studentLon);
         record.setDistanceMeters(distanceMeters);
+        record.setAccuracyMeters(studentAccuracyMeters);
         record.setVerificationStatus("VERIFIED");
         record.setDeviceInstallId(request.deviceInstallId());
         record.setScannedAt(OffsetDateTime.now());
 
+        upsertDevice(student, request.deviceInstallId());
         try {
             attendanceRecordRepository.saveAndFlush(record);
         } catch (DataIntegrityViolationException ex) {
             throw new ApiException(HttpStatus.CONFLICT, "Attendance already registered for this session");
         }
-        upsertDevice(student, request.deviceInstallId());
         eventPublisher.publishEvent(new AttendanceConfirmedEvent(record.getId()));
-        return new VerifyScanResponse(record.getId(), session.getId(), registrationNo, distanceMeters, "VERIFIED", record.getScannedAt());
+        return new VerifyScanResponse(record.getId(), session.getId(), registrationNo, distanceMeters, studentAccuracyMeters, "VERIFIED", record.getScannedAt());
     }
 
     @Transactional
     public VerifyScanResponse verify(VerifyScanRequest request, UserPrincipal principal) {
         if (request.sessionId() != null && request.latitude() != null && request.longitude() != null) {
-            return claim(new ClaimAttendanceRequest(request.sessionId(), request.latitude(), request.longitude(), request.deviceInstallId()), principal);
+            return claim(new ClaimAttendanceRequest(request.sessionId(), request.latitude(), request.longitude(), request.accuracyMeters(), request.capturedAt(), request.deviceInstallId()), principal);
         }
         User student = userRepository.findById(principal.id()).orElseThrow();
         String registrationNo = student.getRegistrationNo();
@@ -135,7 +139,7 @@ public class AttendanceService {
         if (!rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Not enrolled in this class roster");
         }
-        if (!enrollmentRepository.existsByClassEntityIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
+        if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class");
         }
         if (attendanceRecordRepository.existsBySessionIdAndRegistrationNo(session.getId(), registrationNo)) {
@@ -146,9 +150,12 @@ public class AttendanceService {
         double teacherLon = requireValidLongitude(session.getLongitude(), "Session longitude");
         double studentLat = requireValidLatitude(request.latitude(), "Student latitude");
         double studentLon = requireValidLongitude(request.longitude(), "Student longitude");
+        double studentAccuracyMeters = requireValidAccuracy(request.accuracyMeters(), "Student GPS accuracy");
         double maxRadius = session.getRadiusMeters() != null ? session.getRadiusMeters() : 10.0;
+        requireFreshCapture(request.capturedAt(), "Student GPS reading");
 
         double distanceMeters = calculateHaversineDistance(teacherLat, teacherLon, studentLat, studentLon);
+        requireCalibratedInsideRadius(distanceMeters, studentAccuracyMeters, maxRadius);
 
         if (distanceMeters > maxRadius) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -164,17 +171,18 @@ public class AttendanceService {
         record.setLatitude(studentLat);
         record.setLongitude(studentLon);
         record.setDistanceMeters(distanceMeters);
+        record.setAccuracyMeters(studentAccuracyMeters);
         record.setVerificationStatus("VERIFIED");
         record.setDeviceInstallId(request.deviceInstallId());
         record.setScannedAt(OffsetDateTime.now());
+        upsertDevice(student, request.deviceInstallId());
         try {
             attendanceRecordRepository.saveAndFlush(record);
         } catch (DataIntegrityViolationException ex) {
             throw new ApiException(HttpStatus.CONFLICT, "Already marked present");
         }
-        upsertDevice(student, request.deviceInstallId());
         eventPublisher.publishEvent(new AttendanceConfirmedEvent(record.getId()));
-        return new VerifyScanResponse(record.getId(), session.getId(), registrationNo, distanceMeters, "VERIFIED", record.getScannedAt());
+        return new VerifyScanResponse(record.getId(), session.getId(), registrationNo, distanceMeters, studentAccuracyMeters, "VERIFIED", record.getScannedAt());
     }
 
     public static double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -202,6 +210,31 @@ public class AttendanceService {
         return longitude;
     }
 
+    private static double requireValidAccuracy(Double accuracyMeters, String label) {
+        if (accuracyMeters == null || !Double.isFinite(accuracyMeters) || accuracyMeters <= 0.0 || accuracyMeters > 100.0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " is required and must be between 0 and 100 meters");
+        }
+        return accuracyMeters;
+    }
+
+    private static void requireFreshCapture(OffsetDateTime capturedAt, String label) {
+        OffsetDateTime now = OffsetDateTime.now();
+        if (capturedAt == null || capturedAt.isBefore(now.minusSeconds(15)) || capturedAt.isAfter(now.plusSeconds(30))) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " must be freshly captured within the last 15 seconds");
+        }
+    }
+
+    private static void requireCalibratedInsideRadius(double distanceMeters, double accuracyMeters, double radiusMeters) {
+        if (accuracyMeters > radiusMeters) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    String.format("GPS accuracy is %.1fm, too weak for a %.1fm attendance radius. Wait for a stronger GPS fix and try again.", accuracyMeters, radiusMeters));
+        }
+        if (distanceMeters + accuracyMeters > radiusMeters) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    String.format("Location cannot be verified inside the classroom radius. Distance: %.1fm, GPS accuracy: +/-%.1fm, allowed radius: %.1fm.", distanceMeters, accuracyMeters, radiusMeters));
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<AttendanceRecordResponse> studentHistory(UserPrincipal principal) {
         return attendanceRecordRepository.findByStudentIdOrderByScannedAtDesc(principal.id()).stream()
@@ -227,16 +260,32 @@ public class AttendanceService {
                 record.getDistanceMeters(),
                 record.getLatitude(),
                 record.getLongitude(),
+                record.getAccuracyMeters(),
                 record.getScannedAt()
         );
     }
 
     private void upsertDevice(User student, String installId) {
-        Device device = deviceRepository.findByInstallId(installId).orElseGet(Device::new);
-        device.setStudent(student);
-        device.setInstallId(installId);
-        device.setLastSeen(OffsetDateTime.now());
-        deviceRepository.save(device);
+        if (installId == null || installId.isBlank()) {
+            return;
+        }
+        Optional<Device> existingDevice = deviceRepository.findByInstallId(installId);
+        if (existingDevice.isPresent()) {
+            User registeredStudent = existingDevice.get().getStudent();
+            if (!registeredStudent.getId().equals(student.getId())) {
+                throw new ApiException(HttpStatus.CONFLICT,
+                        "This device is already registered to another student (" + registeredStudent.getRegistrationNo() + "). Sharing devices is not allowed.");
+            }
+            Device device = existingDevice.get();
+            device.setLastSeen(OffsetDateTime.now());
+            deviceRepository.save(device);
+        } else {
+            Device device = new Device();
+            device.setStudent(student);
+            device.setInstallId(installId);
+            device.setLastSeen(OffsetDateTime.now());
+            deviceRepository.save(device);
+        }
     }
 
     public record AttendanceConfirmedEvent(java.util.UUID recordId) {}

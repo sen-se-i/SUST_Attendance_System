@@ -1,6 +1,6 @@
 {
   "appId": "com.jarvisatt.attendance",
-  "appName": "JARVIS-ATT",
+  "appName": "SWE Attendance System",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false

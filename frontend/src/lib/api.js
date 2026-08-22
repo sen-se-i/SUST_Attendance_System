@@ -39,6 +39,10 @@ export async function api(path, options = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      setToken(null);
+      localStorage.removeItem("jarvisatt.user");
+    }
     let message = `Request failed (${response.status})`;
     try {
       const body = await response.json();
@@ -48,6 +52,7 @@ export async function api(path, options = {}) {
     }
     throw new ApiError(message);
   }
+
   if (response.status === 204) return null;
   const text = await response.text();
   return text ? JSON.parse(text) : null;

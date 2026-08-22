@@ -3,7 +3,7 @@ package com.jarvisatt.attendance;
 import com.jarvisatt.attendance.domain.Role;
 import com.jarvisatt.attendance.dto.AttendanceDtos.ClaimAttendanceRequest;
 import com.jarvisatt.attendance.dto.AttendanceDtos.VerifyScanRequest;
-import com.jarvisatt.attendance.dto.AuthDtos.RegisterRequest;
+import com.jarvisatt.attendance.dto.AuthDtos.*;
 import com.jarvisatt.attendance.dto.ClassDtos.CreateClassRequest;
 import com.jarvisatt.attendance.dto.ClassDtos.JoinClassRequest;
 import com.jarvisatt.attendance.dto.ClassDtos.RosterRequest;
@@ -27,6 +27,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -62,14 +63,38 @@ class AttendanceFlowIntegrationTest {
         Fixture fixture = fixture("once");
         String payload = activePayload(fixture);
 
-        var response = attendanceService.verify(new VerifyScanRequest(payload, "device-once", null, null, 23.777176, 90.399452), fixture.student());
+        var response = attendanceService.verify(new VerifyScanRequest(payload, "device-once", null, null, 23.777176, 90.399452, 1.0, OffsetDateTime.now()), fixture.student());
         assertThat(response.registrationNo()).isEqualTo("REG-once");
 
-        assertThatThrownBy(() -> attendanceService.verify(new VerifyScanRequest(payload, "device-once", null, null, 23.777176, 90.399452), fixture.student()))
+        assertThatThrownBy(() -> attendanceService.verify(new VerifyScanRequest(payload, "device-once", null, null, 23.777176, 90.399452, 1.0, OffsetDateTime.now()), fixture.student()))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).status())
                 .isEqualTo(HttpStatus.CONFLICT);
         assertThat(attendanceRecordRepository.countBySessionId(fixture.session().sessionId())).isEqualTo(1);
+    }
+
+    @Test
+    void deviceSharingIsRejectedOnAttendanceAndLogin() {
+        Fixture fixtureA = fixture("studentA");
+        Fixture fixtureB = fixture("studentB");
+        String payloadA = activePayload(fixtureA);
+
+        // Student A marks attendance on "device-shared" -> registration successful
+        var response = attendanceService.verify(new VerifyScanRequest(payloadA, "device-shared", null, null, 23.777176, 90.399452, 1.0, OffsetDateTime.now()), fixtureA.student());
+        assertThat(response.registrationNo()).isEqualTo("REG-studentA");
+
+        // Student B tries to mark attendance on the same "device-shared" -> should be rejected with CONFLICT
+        String payloadB = activePayload(fixtureB);
+        assertThatThrownBy(() -> attendanceService.verify(new VerifyScanRequest(payloadB, "device-shared", null, null, 23.777176, 90.399452, 1.0, OffsetDateTime.now()), fixtureB.student()))
+                .isInstanceOf(ApiException.class)
+                .extracting(ex -> ((ApiException) ex).status())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        // Student B tries to log in with "device-shared" -> should be rejected with CONFLICT
+        assertThatThrownBy(() -> authService.login(new LoginRequest("student-studentB@example.com", "password", "device-shared")))
+                .isInstanceOf(ApiException.class)
+                .extracting(ex -> ((ApiException) ex).status())
+                .isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test
@@ -86,7 +111,7 @@ class AttendanceFlowIntegrationTest {
                     ready.countDown();
                     start.await(2, TimeUnit.SECONDS);
                     try {
-                        attendanceService.verify(new VerifyScanRequest(payload, "device-race-" + i, null, null, 23.777176, 90.399452), fixture.student());
+                        attendanceService.verify(new VerifyScanRequest(payload, "device-race-" + i, null, null, 23.777176, 90.399452, 1.0, OffsetDateTime.now()), fixture.student());
                         successes.incrementAndGet();
                     } catch (ApiException ignored) {
                     }
@@ -112,7 +137,7 @@ class AttendanceFlowIntegrationTest {
         String payload = activePayload(fixture);
 
         assertThatThrownBy(() -> attendanceService.verify(
-                new VerifyScanRequest(payload, "device-far", null, null, 23.780000, 90.399452),
+                new VerifyScanRequest(payload, "device-far", null, null, 23.780000, 90.399452, 1.0, OffsetDateTime.now()),
                 fixture.student()))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).status())
@@ -124,7 +149,7 @@ class AttendanceFlowIntegrationTest {
         Fixture fixture = fixture("gps-far");
 
         assertThatThrownBy(() -> attendanceService.claim(
-                new ClaimAttendanceRequest(fixture.session().sessionId(), 23.780000, 90.399452, "device-far"),
+                new ClaimAttendanceRequest(fixture.session().sessionId(), 23.780000, 90.399452, 1.0, OffsetDateTime.now(), "device-far"),
                 fixture.student()))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).status())
@@ -136,7 +161,31 @@ class AttendanceFlowIntegrationTest {
         Fixture fixture = fixture("gps-missing");
 
         assertThatThrownBy(() -> attendanceService.claim(
-                new ClaimAttendanceRequest(fixture.session().sessionId(), null, 90.399452, "device-missing"),
+                new ClaimAttendanceRequest(fixture.session().sessionId(), null, 90.399452, 1.0, OffsetDateTime.now(), "device-missing"),
+                fixture.student()))
+                .isInstanceOf(ApiException.class)
+                .extracting(ex -> ((ApiException) ex).status())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void gpsClaimRejectsWeakAccuracyEvenWhenCoordinateCenterIsInsideRadius() {
+        Fixture fixture = fixture("gps-weak-accuracy", 5.0);
+
+        assertThatThrownBy(() -> attendanceService.claim(
+                new ClaimAttendanceRequest(fixture.session().sessionId(), 23.777176, 90.399452, 25.0, OffsetDateTime.now(), "device-weak"),
+                fixture.student()))
+                .isInstanceOf(ApiException.class)
+                .extracting(ex -> ((ApiException) ex).status())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @Test
+    void gpsClaimRejectsStaleLocationCapture() {
+        Fixture fixture = fixture("gps-stale");
+
+        assertThatThrownBy(() -> attendanceService.claim(
+                new ClaimAttendanceRequest(fixture.session().sessionId(), 23.777176, 90.399452, 1.0, OffsetDateTime.now().minusMinutes(2), "device-stale"),
                 fixture.student()))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).status())
@@ -144,14 +193,18 @@ class AttendanceFlowIntegrationTest {
     }
 
     private Fixture fixture(String suffix) {
-        var teacherAuth = authService.register(new RegisterRequest("teacher-" + suffix + "@example.com", "password", Role.ADMIN, null));
-        var studentAuth = authService.register(new RegisterRequest("student-" + suffix + "@example.com", "password", Role.STUDENT, "REG-" + suffix));
+        return fixture(suffix, 10.0);
+    }
+
+    private Fixture fixture(String suffix, double radiusMeters) {
+        var teacherAuth = authService.register(new RegisterRequest("teacher-" + suffix + "@example.com", "password", Role.ADMIN, null, null));
+        var studentAuth = authService.register(new RegisterRequest("student-" + suffix + "@example.com", "password", Role.STUDENT, "REG-" + suffix, null));
         UserPrincipal teacher = new UserPrincipal(teacherAuth.userId(), "teacher-" + suffix + "@example.com", "", Role.ADMIN, null);
         UserPrincipal student = new UserPrincipal(studentAuth.userId(), "student-" + suffix + "@example.com", "", Role.STUDENT, "REG-" + suffix);
         var createdClass = classService.create(new CreateClassRequest("CSE", "2026", "CSE101"), teacher);
         rosterService.addRoster(createdClass.id(), new RosterRequest(List.of("REG-" + suffix)), teacher);
         enrollmentService.join(new JoinClassRequest(createdClass.code(), "REG-" + suffix), student);
-        var session = sessionLifecycleService.start(new StartSessionRequest(createdClass.id(), 23.777176, 90.399452, 10.0, 2, 5), teacher);
+        var session = sessionLifecycleService.start(new StartSessionRequest(createdClass.id(), 23.777176, 90.399452, 1.0, OffsetDateTime.now(), radiusMeters, 2, 5), teacher);
         return new Fixture(student, session);
     }
 

@@ -15,13 +15,17 @@ public final class AttendanceDtos {
             String attestationToken,
             UUID sessionId,
             Double latitude,
-            Double longitude
+            Double longitude,
+            Double accuracyMeters,
+            OffsetDateTime capturedAt
     ) {}
 
     public record ClaimAttendanceRequest(
             @NotNull UUID sessionId,
             @NotNull Double latitude,
             @NotNull Double longitude,
+            @NotNull Double accuracyMeters,
+            @NotNull OffsetDateTime capturedAt,
             @NotBlank String deviceInstallId
     ) {}
 
@@ -30,6 +34,7 @@ public final class AttendanceDtos {
             UUID sessionId,
             String registrationNo,
             Double distanceMeters,
+            Double accuracyMeters,
             String status,
             OffsetDateTime scannedAt
     ) {}
@@ -43,6 +48,7 @@ public final class AttendanceDtos {
             Double distanceMeters,
             Double latitude,
             Double longitude,
+            Double accuracyMeters,
             OffsetDateTime scannedAt
     ) {}
 }
