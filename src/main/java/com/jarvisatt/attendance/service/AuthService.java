@@ -10,6 +10,7 @@ import com.jarvisatt.attendance.repository.DeviceRepository;
 import com.jarvisatt.attendance.security.JwtService;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,13 +27,25 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    @Autowired(required = false)
+    private EnrollmentRepository enrollmentRepository;
+
+    @Autowired(required = false)
+    private AttendanceRecordRepository attendanceRecordRepository;
+
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new ApiException(HttpStatus.CONFLICT, "Email already registered");
         }
-        if (request.role() == Role.STUDENT && (request.registrationNo() == null || request.registrationNo().isBlank())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Student registration number is required");
+        if (request.role() == Role.STUDENT) {
+            if (request.registrationNo() == null || request.registrationNo().isBlank()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Student registration number is required");
+            }
+            String regNo = request.registrationNo().trim();
+            if (userRepository.existsByRegistrationNo(regNo)) {
+                throw new ApiException(HttpStatus.CONFLICT, "Registration number '" + regNo + "' is already registered by another student");
+            }
         }
         User user = new User();
         user.setEmail(request.email().trim().toLowerCase());
@@ -89,8 +102,42 @@ public class AuthService {
         return authResponse(user);
     }
 
+    @Transactional(readOnly = true)
+    public UserProfileResponse profile(UserPrincipal principal) {
+        User user = userRepository.findById(principal.id()).orElseThrow();
+        String dept = user.getRole() == Role.STUDENT ? "Software Engineering" : "Software Engineering / Faculty";
+        return new UserProfileResponse(user.getId(), user.getEmail(), user.getRole(), user.getRegistrationNo(), dept);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByRegistrationNo(request.registrationNo().trim())
+                .or(() -> userRepository.findByEmail(request.registrationNo().trim().toLowerCase()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Account not found for: " + request.registrationNo()));
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        deviceRepository.deleteByStudentId(user.getId());
+    }
+
+    @Transactional
+    public void deleteUserByEmailOrRegistrationNo(String target) {
+        User user = userRepository.findByEmail(target.trim().toLowerCase())
+                .or(() -> userRepository.findByRegistrationNo(target.trim()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User account not found for: " + target));
+
+        deviceRepository.deleteByStudentId(user.getId());
+        if (enrollmentRepository != null) {
+            enrollmentRepository.deleteByStudentId(user.getId());
+        }
+        if (attendanceRecordRepository != null) {
+            attendanceRecordRepository.deleteByStudentId(user.getId());
+        }
+        userRepository.delete(user);
+    }
+
     private AuthResponse authResponse(User user) {
         String token = jwtService.issue(UserPrincipal.from(user));
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getRegistrationNo());
     }
 }
+

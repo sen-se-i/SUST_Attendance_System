@@ -4,8 +4,10 @@ import com.jarvisatt.attendance.domain.ClassRosterEntry;
 import com.jarvisatt.attendance.domain.EnrollmentStatus;
 import com.jarvisatt.attendance.dto.ClassDtos.RosterEntryResponse;
 import com.jarvisatt.attendance.dto.ClassDtos.RosterRequest;
+import com.jarvisatt.attendance.repository.AttendanceRecordRepository;
 import com.jarvisatt.attendance.repository.ClassRosterRepository;
 import com.jarvisatt.attendance.repository.EnrollmentRepository;
+import com.jarvisatt.attendance.repository.UserRepository;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,8 @@ public class RosterService {
     private final ClassService classService;
     private final ClassRosterRepository rosterRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceRecordRepository attendanceRecordRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public int addRoster(UUID classId, RosterRequest request, UserPrincipal teacher) {
@@ -41,9 +45,26 @@ public class RosterService {
         classService.ownedClass(classId, teacher);
         Set<String> joinedRegistrationNos = enrollmentRepository.findByClassEntityIdAndStatus(classId, EnrollmentStatus.ACTIVE).stream()
                 .map(enrollment -> enrollment.getStudent().getRegistrationNo())
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toSet());
-        return rosterRepository.findByClassIdOrderByRegistrationNo(classId).stream()
-                .map(entry -> new RosterEntryResponse(entry.getRegistrationNo(), joinedRegistrationNos.contains(entry.getRegistrationNo())))
+
+        Set<String> allRegs = new java.util.LinkedHashSet<>(joinedRegistrationNos);
+        rosterRepository.findByClassIdOrderByRegistrationNo(classId).forEach(entry -> allRegs.add(entry.getRegistrationNo()));
+
+        return allRegs.stream()
+                .map(reg -> new RosterEntryResponse(reg, joinedRegistrationNos.contains(reg)))
                 .toList();
     }
+
+    @Transactional
+    public void removeStudentFromClass(UUID classId, String registrationNo, UserPrincipal teacher) {
+        classService.ownedClass(classId, teacher);
+        String normalized = registrationNo.trim();
+        rosterRepository.deleteByClassIdAndRegistrationNo(classId, normalized);
+        userRepository.findByRegistrationNo(normalized).ifPresent(student -> {
+            enrollmentRepository.deleteByClassEntityIdAndStudentId(classId, student.getId());
+            attendanceRecordRepository.deleteByClassEntityIdAndStudentId(classId, student.getId());
+        });
+    }
 }
+

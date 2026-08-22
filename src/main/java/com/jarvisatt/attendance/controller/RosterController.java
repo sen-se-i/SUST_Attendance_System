@@ -15,21 +15,36 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/classes/{classId}/roster")
+@RequestMapping("/api/classes/{classId}")
 @RequiredArgsConstructor
 public class RosterController {
     private final RosterService rosterService;
 
-    @PostMapping
+    @PostMapping("/roster")
     @PreAuthorize("hasRole('ADMIN')")
     Map<String, Integer> add(@PathVariable UUID classId, @Valid @RequestBody RosterRequest request,
                              @AuthenticationPrincipal UserPrincipal principal) {
         return Map.of("accepted", rosterService.addRoster(classId, request, principal));
     }
 
-    @GetMapping
+    @GetMapping("/roster")
     @PreAuthorize("hasRole('ADMIN')")
-    List<RosterEntryResponse> list(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
+    List<RosterEntryResponse> listRoster(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
         return rosterService.listRoster(classId, principal);
     }
+
+    @GetMapping("/students")
+    @PreAuthorize("hasRole('ADMIN')")
+    List<RosterEntryResponse> listStudents(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
+        return rosterService.listRoster(classId, principal);
+    }
+
+    @DeleteMapping("/students/{registrationNo}")
+    @PreAuthorize("hasRole('ADMIN')")
+    Map<String, String> removeStudent(@PathVariable UUID classId, @PathVariable String registrationNo,
+                                      @AuthenticationPrincipal UserPrincipal principal) {
+        rosterService.removeStudentFromClass(classId, registrationNo, principal);
+        return Map.of("status", "REMOVED");
+    }
 }
+

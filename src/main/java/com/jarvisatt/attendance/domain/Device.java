@@ -28,3 +28,4 @@ public class Device {
     @Column(name = "last_seen", nullable = false)
     private OffsetDateTime lastSeen;
 }
+

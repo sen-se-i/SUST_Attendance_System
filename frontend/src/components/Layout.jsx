@@ -1,8 +1,10 @@
 import { LogOut } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
+import { SideDrawer } from "./SideDrawer";
 
 export function Layout({ children }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <div className="app-shell">
@@ -16,11 +18,17 @@ export function Layout({ children }) {
           </div>
         </div>
         {user && (
-          <button type="button" className="btn btn-secondary" onClick={logout}>
-            <LogOut size={16} /> Logout
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setDrawerOpen(true)}
+            style={{ display: "flex", alignItems: "center", gap: 8, borderColor: "#00E6FF", color: "#00E6FF" }}
+          >
+            <Menu size={18} /> Menu
           </button>
         )}
       </header>
+      {user && <SideDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />}
       <main className="app-main">{children}</main>
     </div>
   );

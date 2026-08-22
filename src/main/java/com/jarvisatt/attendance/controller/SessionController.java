@@ -15,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +47,19 @@ public class SessionController {
         return sessionLifecycleService.activeSession(classId);
     }
 
+    @GetMapping("/class/{classId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+    List<SessionHistoryResponse> listByClass(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
+        return sessionLifecycleService.listByClass(classId, principal);
+    }
+
+    @DeleteMapping("/{sessionId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    Map<String, String> deleteSession(@PathVariable UUID sessionId, @AuthenticationPrincipal UserPrincipal principal) {
+        sessionLifecycleService.deleteSession(sessionId, principal);
+        return Map.of("status", "DELETED");
+    }
+
     @GetMapping("/{sessionId}/current")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     CurrentTickResponse current(@PathVariable UUID sessionId) {
@@ -64,3 +78,4 @@ public class SessionController {
                 .body(qrCodeService.png(payload, 420));
     }
 }
+

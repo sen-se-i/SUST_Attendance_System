@@ -18,9 +18,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException ex) {
-        return response(HttpStatus.BAD_REQUEST, "Invalid request");
+        String msg = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + " " + err.getDefaultMessage())
+                .findFirst()
+                .orElse("Invalid request parameter");
+        return response(HttpStatus.BAD_REQUEST, msg);
     }
-    
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ErrorResponse> conflict(DataIntegrityViolationException ex) {
         return response(HttpStatus.CONFLICT, "Request conflicts with existing data");
@@ -35,3 +39,4 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(new ErrorResponse(message, status.value(), OffsetDateTime.now()));
     }
 }
+

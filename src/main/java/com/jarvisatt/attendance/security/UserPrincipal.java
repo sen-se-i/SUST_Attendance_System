@@ -30,3 +30,4 @@ public record UserPrincipal(UUID id, String email, String password, Role role, S
         return password;
     }
 }
+

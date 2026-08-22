@@ -11,4 +11,10 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     long countBySessionId(UUID sessionId);
     List<AttendanceRecord> findByStudentIdOrderByScannedAtDesc(UUID studentId);
     List<AttendanceRecord> findByClassEntityIdOrderByScannedAtDesc(UUID classId);
+    List<AttendanceRecord> findByClassEntityIdAndStudentIdOrderByScannedAtDesc(UUID classId, UUID studentId);
+    void deleteByClassEntityIdAndStudentId(UUID classId, UUID studentId);
+    void deleteByStudentId(UUID studentId);
+    void deleteBySessionId(UUID sessionId);
+    void deleteByIdIn(List<UUID> ids);
 }
+

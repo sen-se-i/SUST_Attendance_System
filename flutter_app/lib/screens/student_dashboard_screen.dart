@@ -1,67 +1,59 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/class_model.dart';
-import '../models/session_model.dart';
-import '../models/attendance_model.dart';
+import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
-import '../services/location_service.dart';
-import '../widgets/location_radar_widget.dart';
+import '../models/class_model.dart';
+import '../models/attendance_model.dart';
+import '../models/session_model.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({Key? key}) : super(key: key);
 
-  @override
+  @override:
   State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
 }
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   List<ClassModel> _classes = [];
+  bool _isLoading = false;
   ClassModel? _selectedClass;
-  SessionModel? _activeSession;
-  List<AttendanceRecordModel> _myHistory = [];
-  bool _isLoadingClasses = true;
-  bool _isClaiming = false;
-  bool _hasAttendedCurrentSession = false;
-  AttendanceRecordModel? _lastResult;
-  Timer? _timer;
-  int _remainingSeconds = 0;
+
+  List<AttendanceRecordModel> _myRecords = [];
 
   @override
   void initState() {
     super.initState();
     _loadEnrolledClasses();
-    _loadHistory();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 
   Future<void> _loadEnrolledClasses() async {
+    setState(() => _isLoading = true);
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final response = await ApiService.getClasses(auth.currentUser!.token, false);
-    setState(() {
-      _isLoadingClasses = false;
-      if (response.isSuccess && response.data != null) {
-        _classes = response.data!;
-        if (_classes.isNotEmpty) {
-          _selectedClass = _classes.first;
-          _checkActiveSession();
+    final res = await ApiService.getClasses(auth.token, false);
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (res.isSuccess && res.data != null) {
+          _classes = res.data!;
         }
-      }
-    });
+      });
+    }
   }
 
-  Future<void> _loadHistory() async {
+  Future<void> _loadClassDetail(ClassModel item) async {
+    setState(() {
+      _selectedClass = item;
+      _isLoading = true;
+    });
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final response = await ApiService.getStudentHistory(auth.currentUser!.token);
-    if (response.isSuccess && response.data != null) {
+    final res = await ApiService.getStudentHistory(auth.token);
+    if (mounted) {
       setState(() {
-        _myHistory = response.data!;
+        _isLoading = false;
+        if (res.isSuccess && res.data != null) {
+          _myRecords = res.data!.where((r) => r.classId == item.id).toList();
+        }
       });
     }
   }
@@ -126,31 +118,31 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       capturedAt: loc.capturedAt,
       deviceInstallId: deviceId,
     );
+  }
 
-    setState(() => _isClaiming = false);
-
-    if (response.isSuccess && response.data != null) {
-      setState(() {
-        _hasAttendedCurrentSession = true;
-        _lastResult = response.data;
-      });
-      _loadHistory();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Attendance Registered! Distance: ${response.data!.distanceMeters.toStringAsFixed(1)}m'),
-          backgroundColor: Colors.green,
+  void _showProfileModal() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0D1520),
+        title: const Text('Student Profile', style: TextStyle(color: Color(0xFF00E6FF), fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Email: ${auth.user?.email ?? "N/A"}', style: const TextStyle(color: Colors.white)),
+            const SizedBox(height: 8),
+            Text('Registration No: ${auth.user?.registrationNo ?? "N/A"}', style: const TextStyle(color: Color(0xFF00FF88), fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Department: Software Engineering', style: TextStyle(color: Color(0xFF94A3B8))),
+          ],
         ),
-      );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response.message ?? 'Attendance verification failed'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 
   @override
@@ -172,17 +164,28 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             ),
           ],
         ),
+        leading: _selectedClass != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF00E6FF)),
+                onPressed: () => setState(() => _selectedClass = null),
+              )
+            : null,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Color(0xFF00E6FF)),
             onPressed: () {
-              _checkActiveSession();
-              _loadHistory();
+              if (_selectedClass != null) {
+                _loadClassDetail(_selectedClass!);
+              } else {
+                _loadEnrolledClasses();
+              }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            onPressed: () => auth.logout(),
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(Icons.menu, color: Color(0xFF00E6FF)),
+              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+            ),
           ),
         ],
       ),
@@ -201,7 +204,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFF213042)),
                     ),
-                    child: Row(
+                    if (item.credits != null)
+                      Text('${item.credits} Credits', style: const TextStyle(color: Color(0xFF00E6FF), fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(item.subjectName ?? item.subjectCode, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text('Teacher: Faculty', style: const TextStyle(color: Color(0xFF00E6FF), fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('${item.subjectCode} • ${item.credits ?? 3.0} Credits', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                const Divider(color: Color(0xFF213042), height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(item.department, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                    const Row(
                       children: [
                         CircleAvatar(
                           radius: 24,
@@ -229,8 +247,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
                   // Class Selector Dropdown
                   if (_classes.isNotEmpty)
@@ -504,7 +529,57 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                 ],
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: const Color(0xFF0D1520), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF213042))),
+                  child: Column(
+                    children: [
+                      const Text('ATTENDED', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+                      const SizedBox(height: 4),
+                      Text('${_myRecords.length}', style: const TextStyle(color: Color(0xFF00FF88), fontSize: 20, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          const Text('Attendance Log', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+
+          _myRecords.isEmpty
+              ? const Text('No attendance records logged yet.', style: TextStyle(color: Color(0xFF94A3B8)))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _myRecords.length,
+                  itemBuilder: (ctx, idx) {
+                    final r = _myRecords[idx];
+                    final time = DateFormat('yyyy-MM-dd HH:mm:ss').format(r.scannedAt.toLocal());
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: const Color(0xFF0D1520), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF213042))),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.between,
+                        children: [
+                          Text(time, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: const Color(0xFF00FF88).withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                            child: const Text('YES', style: TextStyle(color: Color(0xFF00FF88), fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ],
+      ),
     );
   }
 }
+

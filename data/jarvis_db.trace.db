@@ -1,0 +1,6 @@
+2026-08-15 22:16:41.730954+06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLDataException: Value too long for column "CODE CHARACTER VARYING(6)": "'SWE0613-1121' (12)"; SQL statement:
+insert into classes (academic_session,code,credits,department,semester,subject_code,subject_name,teacher_id,id) values (?,?,?,?,?,?,?,?,?) [22001-224]
+2026-08-15 22:16:46.272385+06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLDataException: Value too long for column "CODE CHARACTER VARYING(6)": "'SWE0613-1121' (12)"; SQL statement:
+insert into classes (academic_session,code,credits,department,semester,subject_code,subject_name,teacher_id,id) values (?,?,?,?,?,?,?,?,?) [22001-224]

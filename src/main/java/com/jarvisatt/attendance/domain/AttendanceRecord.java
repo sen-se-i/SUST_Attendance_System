@@ -58,3 +58,4 @@ public class AttendanceRecord {
     @Column(name = "verification_status")
     private String verificationStatus = "VERIFIED";
 }
+

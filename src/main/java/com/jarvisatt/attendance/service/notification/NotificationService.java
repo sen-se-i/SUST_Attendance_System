@@ -5,3 +5,4 @@ import com.jarvisatt.attendance.domain.AttendanceRecord;
 public interface NotificationService {
     void attendanceConfirmed(AttendanceRecord record);
 }
+

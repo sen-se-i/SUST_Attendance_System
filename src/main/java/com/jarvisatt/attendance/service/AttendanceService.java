@@ -61,11 +61,20 @@ public class AttendanceService {
             throw new ApiException(HttpStatus.GONE, "Attendance session expired (150s limit reached)");
         }
 
-        if (!rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Registration number not found in class roster allowlist");
+        boolean isEnrolled = enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE);
+        boolean inRoster = rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo);
+        if (!isEnrolled && !inRoster) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class (Registration: " + registrationNo + ")");
         }
-        if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class");
+        if (isEnrolled && !inRoster) {
+            rosterRepository.save(new ClassRosterEntry(session.getClassEntity().getId(), registrationNo));
+        }
+        if (!isEnrolled && inRoster) {
+            Enrollment enrollment = new Enrollment();
+            enrollment.setClassEntity(session.getClassEntity());
+            enrollment.setStudent(student);
+            enrollment.setStatus(EnrollmentStatus.ACTIVE);
+            enrollmentRepository.save(enrollment);
         }
         if (attendanceRecordRepository.existsBySessionIdAndRegistrationNo(session.getId(), registrationNo)) {
             throw new ApiException(HttpStatus.CONFLICT, "Attendance already registered for this session");
@@ -136,8 +145,10 @@ public class AttendanceService {
         }
         ClassSession session = classSessionRepository.findById(payload.sessionId())
                 .orElseThrow(() -> new ApiException(HttpStatus.GONE, "Session not found"));
-        if (!rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Not enrolled in this class roster");
+        boolean isEnrolled = enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE);
+        boolean inRoster = rosterRepository.existsByClassIdAndRegistrationNo(session.getClassEntity().getId(), registrationNo);
+        if (!isEnrolled && !inRoster) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class (Registration: " + registrationNo + ")");
         }
         if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(session.getClassEntity().getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Student has not joined this class");
@@ -250,6 +261,35 @@ public class AttendanceService {
                 .toList();
     }
 
+    @Transactional
+    public void resetStudentDevice(UUID studentId) {
+        deviceRepository.deleteByStudentId(studentId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AttendanceRecordResponse> studentClassHistory(UUID classId, UUID studentId) {
+        return attendanceRecordRepository.findByClassEntityIdAndStudentIdOrderByScannedAtDesc(classId, studentId).stream()
+                .map(this::response)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteStudentClassHistory(UUID classId, UUID studentId) {
+        attendanceRecordRepository.deleteByClassEntityIdAndStudentId(classId, studentId);
+    }
+
+    @Transactional
+    public void deleteAttendanceRecord(UUID recordId) {
+        attendanceRecordRepository.deleteById(recordId);
+    }
+
+    @Transactional
+    public void deleteBatchAttendanceRecords(List<UUID> recordIds) {
+        if (recordIds != null && !recordIds.isEmpty()) {
+            attendanceRecordRepository.deleteByIdIn(recordIds);
+        }
+    }
+
     private AttendanceRecordResponse response(AttendanceRecord record) {
         return new AttendanceRecordResponse(
                 record.getId(),
@@ -303,3 +343,4 @@ public class AttendanceService {
         }
     }
 }
+

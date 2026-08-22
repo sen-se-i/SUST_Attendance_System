@@ -42,4 +42,14 @@ public final class SessionDtos {
             Double accuracyMeters,
             Double radiusMeters
     ) {}
+
+    public record SessionHistoryResponse(
+            UUID sessionId,
+            String status,
+            OffsetDateTime startedAt,
+            OffsetDateTime endedAt,
+            Double radiusMeters,
+            long attendanceCount
+    ) {}
 }
+

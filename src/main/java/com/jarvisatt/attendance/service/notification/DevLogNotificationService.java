@@ -13,3 +13,4 @@ public class DevLogNotificationService implements NotificationService {
                 record.getRegistrationNo(), record.getSession().getId(), record.getScannedAt());
     }
 }
+

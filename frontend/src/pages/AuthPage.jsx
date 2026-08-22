@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { LogIn, LoaderCircle } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 import { useToast } from "../lib/ToastContext";
-import { ApiError } from "../lib/api";
+import { api, ApiError, setToken } from "../lib/api";
 
 const initialLogin = { email: "", password: "" };
 
@@ -12,6 +12,11 @@ export default function AuthPage() {
   const notify = useToast();
   const [loginForm, setLoginForm] = useState(initialLogin);
   const [busy, setBusy] = useState(false);
+
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotRegNo, setForgotRegNo] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to={user.role === "ADMIN" ? "/teacher" : "/student"} replace />;
@@ -37,7 +42,7 @@ export default function AuthPage() {
         </h2>
         <div className="form-group">
           <label className="form-label" htmlFor="login-email">
-            Email
+            Email / Student Account
           </label>
           <input
             id="login-email"
@@ -50,9 +55,18 @@ export default function AuthPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="login-password">
-            Password
-          </label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label className="form-label" htmlFor="login-password">
+              Password
+            </label>
+            <button
+              type="button"
+              style={{ background: "none", border: "none", color: "#00E6FF", fontSize: "0.8rem", cursor: "pointer", fontWeight: 700 }}
+              onClick={() => setShowForgotModal(true)}
+            >
+              Forgot Password?
+            </button>
+          </div>
           <input
             id="login-password"
             className="form-input"

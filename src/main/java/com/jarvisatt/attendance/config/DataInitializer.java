@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -39,7 +40,6 @@ public class DataInitializer implements CommandLineRunner {
         teacher.setRole(Role.ADMIN);
         teacher = userRepository.save(teacher);
 
-        // 2. Seed Student (ch.wixard@student.sust.edu)
         User student = userRepository.findByEmail("ch.wixard@student.sust.edu")
                 .orElseGet(() -> {
                     User u = new User();
@@ -53,10 +53,18 @@ public class DataInitializer implements CommandLineRunner {
         student = userRepository.save(student);
 
 
-        // 3. Seed Demo Class if teacher has no classes
+        userRepository.findByEmail("dummyteacher@gmail.com").ifPresent(u -> {
+            u.setPasswordHash(passwordEncoder.encode("password"));
+            u.setRole(Role.ADMIN);
+            userRepository.save(u);
+        });
+
         List<ClassEntity> teacherClasses = classRepository.findByTeacherId(teacher.getId());
+        Optional<ClassEntity> existingSwe301 = classRepository.findByCode("SWE301");
         ClassEntity demoClass;
-        if (teacherClasses.isEmpty()) {
+        if (existingSwe301.isPresent()) {
+            demoClass = existingSwe301.get();
+        } else if (teacherClasses.isEmpty()) {
             demoClass = new ClassEntity();
             demoClass.setCode("SWE301");
             demoClass.setDepartment("Software Engineering");
@@ -69,13 +77,11 @@ public class DataInitializer implements CommandLineRunner {
             demoClass = teacherClasses.get(0);
         }
 
-        // 4. Add student to roster for demo class
         if (!classRosterRepository.existsByClassIdAndRegistrationNo(demoClass.getId(), student.getRegistrationNo())) {
             classRosterRepository.save(new ClassRosterEntry(demoClass.getId(), student.getRegistrationNo()));
             log.info("Added student registration {} to class roster {}", student.getRegistrationNo(), demoClass.getCode());
         }
 
-        // 5. Enroll student in demo class
         if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(demoClass.getId(), student.getId(), EnrollmentStatus.ACTIVE)) {
             Enrollment enrollment = new Enrollment();
             enrollment.setClassEntity(demoClass);
@@ -88,3 +94,4 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Demo seed data initialization complete.");
     }
 }
+

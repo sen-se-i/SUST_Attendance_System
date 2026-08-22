@@ -33,3 +33,4 @@ public class Enrollment {
     @Column(name = "joined_at", nullable = false, insertable = false, updatable = false)
     private OffsetDateTime joinedAt;
 }
+

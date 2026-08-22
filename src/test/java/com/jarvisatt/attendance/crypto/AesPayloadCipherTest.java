@@ -30,3 +30,4 @@ class AesPayloadCipherTest {
         assertThatThrownBy(() -> cipher.decrypt(tampered)).isInstanceOf(IllegalArgumentException.class);
     }
 }
+

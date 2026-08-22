@@ -1,7 +1,7 @@
 class UserModel {
   final String id;
   final String email;
-  final String role; // 'ADMIN' (Teacher) or 'STUDENT'
+  final String role;
   final String? registrationNo;
   final String token;
 
@@ -25,3 +25,4 @@ class UserModel {
     );
   }
 }
+

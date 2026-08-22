@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
   const [token, setTokenState] = useState(getToken);
 
   const applyAuth = useCallback((auth) => {
-    const nextUser = { userId: auth.userId, role: auth.role, registrationNo: auth.registrationNo };
+    const nextUser = { userId: auth.userId, email: auth.email, role: auth.role, registrationNo: auth.registrationNo };
     setToken(auth.token);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     setTokenState(auth.token);
@@ -63,3 +63,4 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
+

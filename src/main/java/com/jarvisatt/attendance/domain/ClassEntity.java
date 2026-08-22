@@ -18,7 +18,7 @@ public class ClassEntity {
     @GeneratedValue
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 6)
+    @Column(nullable = false, unique = true, length = 30)
     private String code;
 
     @Column(nullable = false)
@@ -30,6 +30,15 @@ public class ClassEntity {
     @Column(name = "subject_code", nullable = false)
     private String subjectCode;
 
+    @Column(name = "semester")
+    private String semester;
+
+    @Column(name = "subject_name")
+    private String subjectName;
+
+    @Column(name = "credits")
+    private Double credits;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "teacher_id")
     private User teacher;
@@ -37,3 +46,4 @@ public class ClassEntity {
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }
+

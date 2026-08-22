@@ -2,15 +2,19 @@ spring:
   application:
     name: jarvis-attendance
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jarvis_att}}
-    username: ${DB_USER:jarvis}
-    password: ${DB_PASSWORD:jarvis}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/jarvis_db;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;AUTO_SERVER=TRUE}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
   jpa:
     hibernate:
       ddl-auto: validate
     open-in-view: false
   flyway:
     enabled: true
+    validate-on-migrate: false
+    baseline-on-migrate: true
+    out-of-order: true
   mail:
     host: localhost
     port: 1025

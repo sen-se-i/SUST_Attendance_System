@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { CircleCheckBig, GraduationCap, School, MapPin, Navigation, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, RefreshCw, BookOpen, ChevronRight, Clock, User, CheckCircle2 } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/ToastContext";
 import { useAuth } from "../lib/AuthContext";
@@ -10,67 +11,41 @@ import { captureCalibratedLocation } from "../lib/location";
 const initialJoinForm = { classCode: "", registrationNo: "" };
 
 export default function StudentDashboard() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const notify = useToast();
-  const [joinForm, setJoinForm] = useState(() => ({ ...initialJoinForm, registrationNo: user?.registrationNo || "" }));
-  const [deviceInstallId] = useState(getDeviceInstallId);
-  const [attendance, setAttendance] = useState([]);
-  const [joinedClasses, setJoinedClasses] = useState([]);
-  const [selectedClassId, setSelectedClassId] = useState("");
-  const [activeSession, setActiveSession] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [claiming, setClaiming] = useState(false);
-  const [lastClaimResult, setLastClaimResult] = useState(null);
+  const { user } = useAuth();
 
-  const loadAttendance = useCallback(async () => {
+  const [classes, setClasses] = useState([]);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [classCode, setClassCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const loadClasses = useCallback(async () => {
     try {
-      setAttendance(await api("/api/attendance/me"));
+      setClasses(await api("/api/classes/enrolled"));
     } catch (error) {
-      notify(error instanceof ApiError ? error.message : "Failed to load attendance", "danger");
+      notify(error instanceof ApiError ? error.message : "Failed to load enrolled classes", "danger");
     }
   }, [notify]);
 
-  const loadJoinedClasses = useCallback(async () => {
-    try {
-      const classes = await api("/api/classes/enrolled");
-      setJoinedClasses(classes);
-      if (classes.length > 0 && !selectedClassId) {
-        setSelectedClassId(classes[0].id);
-      }
-    } catch (error) {
-      notify(error instanceof ApiError ? error.message : "Failed to load joined classes", "danger");
-    }
-  }, [notify, selectedClassId]);
-
-  const checkActiveSession = useCallback(async () => {
-    if (!selectedClassId) {
-      setActiveSession(null);
-      return;
-    }
-    try {
-      const session = await api(`/api/sessions/active?classId=${selectedClassId}`);
-      setActiveSession(session);
-    } catch (error) {
-      setActiveSession(null);
-    }
-  }, [selectedClassId]);
-
   useEffect(() => {
-    loadAttendance();
-    loadJoinedClasses();
-  }, [loadAttendance, loadJoinedClasses]);
+    loadClasses();
+  }, [loadClasses]);
 
-  useEffect(() => {
-    checkActiveSession();
-  }, [checkActiveSession]);
+  async function handleJoinClass(e) {
+    e.preventDefault();
+    if (!classCode.trim()) return;
 
-  async function handleJoin(event) {
-    event.preventDefault();
     setBusy(true);
     try {
-      await api("/api/classes/join", { method: "POST", body: JSON.stringify(joinForm) });
-      notify("Class joined.", "success");
-      await loadJoinedClasses();
+      await api("/api/classes/join", {
+        method: "POST",
+        body: JSON.stringify({ classCode: classCode.trim() }),
+      });
+      notify("Enrolled in class successfully!", "success");
+      setShowJoinModal(false);
+      setClassCode("");
+      await loadClasses();
     } catch (error) {
       notify(error instanceof ApiError ? error.message : "Failed to join class", "danger");
     } finally {
@@ -108,68 +83,18 @@ export default function StudentDashboard() {
   const isAlreadyAttended = activeSession && attendance.some((r) => r.sessionId === activeSession.sessionId);
 
   return (
-    <div className="student-grid">
-      <form className="panel glass-panel" onSubmit={handleJoin}>
-        <h2>
-          <School size={18} /> Join Class
-        </h2>
-        <div className="form-group">
-          <label className="form-label" htmlFor="classCode">
-            Class Code
-          </label>
-          <input
-            id="classCode"
-            className="form-input"
-            maxLength={6}
-            required
-            placeholder="8K2P0X"
-            value={joinForm.classCode}
-            onChange={(e) => setJoinForm((f) => ({ ...f, classCode: e.target.value.toUpperCase() }))}
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="registrationNo">
-            Registration No
-          </label>
-          <input
-            id="registrationNo"
-            className="form-input"
-            required
-            value={joinForm.registrationNo}
-            onChange={(e) => setJoinForm((f) => ({ ...f, registrationNo: e.target.value }))}
-          />
-        </div>
-        <button type="submit" className="btn btn-primary" disabled={busy}>
-          Join
-        </button>
-      </form>
+    <div style={{ paddingBottom: 100 }}>
 
-      <div className="panel glass-panel">
-        <div className="toolbar">
-          <h2>
-            <GraduationCap size={18} /> Joined Classes
-          </h2>
-          <button type="button" className="btn btn-secondary" onClick={checkActiveSession}>
-            <RefreshCw size={14} /> Check Active Session
-          </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>My Enrolled Classes</h1>
+          <p style={{ color: "#94a3b8", fontSize: "0.82rem", margin: "2px 0 0" }}>
+            Select a class to view attendance records and live GPS sessions.
+          </p>
         </div>
-        {joinedClasses.length === 0 ? (
-          <p className="empty-state">You haven't joined any classes yet.</p>
-        ) : (
-          <div className="list">
-            {joinedClasses.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`list-item joined-class-item ${selectedClassId === item.id ? "active" : ""}`}
-                onClick={() => setSelectedClassId(item.id)}
-              >
-                {item.subjectCode} · {item.department}
-                <span className="subtitle"> — code {item.code}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.82rem" }} onClick={loadClasses}>
+          <RefreshCw size={14} /> Refresh
+        </button>
       </div>
 
       <div className="panel glass-panel scanner-panel">
@@ -211,10 +136,19 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      <div className="panel glass-panel">
-        <h2>My Attendance</h2>
-        <AttendanceTable rows={attendance} emptyLabel="No attendance records yet." showSubject />
-      </div>
+              <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowJoinModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={busy || !classCode.trim()}>
+                  Join Class
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

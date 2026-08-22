@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface ClassRosterRepository extends JpaRepository<ClassRosterEntry, ClassRosterEntry.RosterId> {
     boolean existsByClassIdAndRegistrationNo(UUID classId, String registrationNo);
     List<ClassRosterEntry> findByClassIdOrderByRegistrationNo(UUID classId);
+    void deleteByClassIdAndRegistrationNo(UUID classId, String registrationNo);
 }
+

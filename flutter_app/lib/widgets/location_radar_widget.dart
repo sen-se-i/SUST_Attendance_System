@@ -47,7 +47,7 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
           return Stack(
             alignment: Alignment.center,
             children: [
-              // Outer radar ring pulse
+
               Transform.scale(
                 scale: pulseScale,
                 child: Container(
@@ -63,7 +63,7 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
                   ),
                 ),
               ),
-              // Inner geofence circle
+
               Container(
                 width: 110,
                 height: 110,
@@ -81,7 +81,7 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
                   ),
                 ),
               ),
-              // Center location pin
+
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -116,3 +116,4 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
     );
   }
 }
+

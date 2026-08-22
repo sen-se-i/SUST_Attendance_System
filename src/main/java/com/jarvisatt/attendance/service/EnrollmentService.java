@@ -19,22 +19,46 @@ public class EnrollmentService {
     private final UserRepository userRepository;
 
     @Transactional
-    public JoinClassResponse join(JoinClassRequest request, UserPrincipal studentPrincipal) {
+    public JoinClassResponse joinDirect(JoinClassDirectRequest request, UserPrincipal studentPrincipal) {
         User student = userRepository.findById(studentPrincipal.id()).orElseThrow();
-        if (!request.registrationNo().equals(student.getRegistrationNo())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Registration number does not match logged-in student");
-        }
-        ClassEntity classEntity = classRepository.findByCode(request.classCode())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Class code not found"));
-        if (!rosterRepository.existsByClassIdAndRegistrationNo(classEntity.getId(), request.registrationNo())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Registration number is not in this class roster");
-        }
+
+        String inputCode = request.effectiveCode();
+        String normalizedCode = inputCode.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+
+        ClassEntity classEntity = classRepository.findByCode(inputCode)
+                .or(() -> classRepository.findFirstByCodeIgnoreCase(inputCode))
+                .or(() -> classRepository.findFirstByCodeIgnoreCase(normalizedCode))
+                .or(() -> classRepository.findFirstBySubjectCodeIgnoreCase(inputCode))
+                .or(() -> classRepository.findFirstBySubjectCodeIgnoreCase(normalizedCode))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Class or Subject code '" + inputCode + "' not found. Please check with your teacher."));
+
         Enrollment enrollment = enrollmentRepository.findByClassEntityIdAndStudentId(classEntity.getId(), student.getId())
                 .orElseGet(Enrollment::new);
         enrollment.setClassEntity(classEntity);
         enrollment.setStudent(student);
         enrollment.setStatus(EnrollmentStatus.ACTIVE);
         enrollmentRepository.save(enrollment);
+
+        if (student.getRegistrationNo() != null && !student.getRegistrationNo().isBlank()) {
+            String cleanReg = student.getRegistrationNo().trim();
+            if (!rosterRepository.existsByClassIdAndRegistrationNo(classEntity.getId(), cleanReg)) {
+                rosterRepository.save(new ClassRosterEntry(classEntity.getId(), cleanReg));
+            }
+        }
+
         return new JoinClassResponse(enrollment.getId(), classEntity.getId(), enrollment.getStatus().name());
     }
+
+    public java.util.List<EnrolledStudentResponse> getEnrolledStudents(java.util.UUID classId) {
+        return enrollmentRepository.findByClassEntityIdAndStatus(classId, EnrollmentStatus.ACTIVE)
+                .stream()
+                .map(e -> new EnrolledStudentResponse(
+                        e.getStudent().getRegistrationNo(),
+                        e.getStudent().getEmail(),
+                        e.getStatus().name(),
+                        e.getJoinedAt()
+                ))
+                .toList();
+    }
 }
+

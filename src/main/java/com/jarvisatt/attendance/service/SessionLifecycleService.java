@@ -2,9 +2,13 @@ package com.jarvisatt.attendance.service;
 
 import com.jarvisatt.attendance.domain.ClassSession;
 import com.jarvisatt.attendance.domain.ClassSessionStatus;
+import com.jarvisatt.attendance.domain.EnrollmentStatus;
+import com.jarvisatt.attendance.domain.Role;
 import com.jarvisatt.attendance.dto.SessionDtos.*;
 import com.jarvisatt.attendance.exception.ApiException;
+import com.jarvisatt.attendance.repository.AttendanceRecordRepository;
 import com.jarvisatt.attendance.repository.ClassSessionRepository;
+import com.jarvisatt.attendance.repository.EnrollmentRepository;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import com.jarvisatt.attendance.session.SessionEngine;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,6 +25,8 @@ import java.util.UUID;
 public class SessionLifecycleService {
     private final ClassService classService;
     private final ClassSessionRepository classSessionRepository;
+    private final AttendanceRecordRepository attendanceRecordRepository;
+    private final EnrollmentRepository enrollmentRepository;
     private final SessionEngine sessionEngine;
 
     @Transactional
@@ -80,6 +87,39 @@ public class SessionLifecycleService {
         return response(session);
     }
 
+    @Transactional(readOnly = true)
+    public List<SessionHistoryResponse> listByClass(UUID classId, UserPrincipal principal) {
+        if (principal.role() == Role.ADMIN) {
+            classService.ownedClass(classId, principal);
+        } else {
+            if (!enrollmentRepository.existsByClassEntityIdAndStudentIdAndStatus(classId, principal.id(), EnrollmentStatus.ACTIVE)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "You are not enrolled in this class");
+            }
+        }
+        return classSessionRepository.findByClassEntityIdOrderByStartedAtDesc(classId).stream()
+                .map(s -> {
+                    long count = attendanceRecordRepository.countBySessionId(s.getId());
+                    return new SessionHistoryResponse(
+                            s.getId(),
+                            s.getStatus().name(),
+                            s.getStartedAt(),
+                            s.getEndedAt(),
+                            s.getRadiusMeters(),
+                            count);
+                })
+                .toList();
+    }
+
+    @Transactional
+    public void deleteSession(UUID sessionId, UserPrincipal teacher) {
+        ClassSession session = classSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found"));
+        classService.ownedClass(session.getClassEntity().getId(), teacher);
+        sessionEngine.stop(sessionId);
+        attendanceRecordRepository.deleteBySessionId(sessionId);
+        classSessionRepository.deleteById(sessionId);
+    }
+
     public SessionResponse response(ClassSession session) {
         OffsetDateTime startedAt = session.getStartedAt();
         OffsetDateTime expiresAt = startedAt.plusSeconds(150);
@@ -138,3 +178,4 @@ public class SessionLifecycleService {
         }
     }
 }
+
