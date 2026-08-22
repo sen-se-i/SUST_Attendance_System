@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, RefreshCw, BookOpen, ChevronRight, Clock, User, CheckCircle2 } from "lucide-react";
+import { Plus, RefreshCw, BookOpen, ChevronRight, Clock, User } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/ToastContext";
 import { useAuth } from "../lib/AuthContext";
-import { getDeviceInstallId } from "../lib/deviceId";
-import { AttendanceTable } from "../components/AttendanceTable";
-import { captureCalibratedLocation } from "../lib/location";
-
-const initialJoinForm = { classCode: "", registrationNo: "" };
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -53,88 +48,122 @@ export default function StudentDashboard() {
     }
   }
 
-  async function handleClaimAttendance() {
-    if (!activeSession) return;
-    setClaiming(true);
-
-    try {
-      const location = await captureCalibratedLocation(activeSession.radiusMeters || 20);
-      const result = await api("/api/attendance/claim", {
-        method: "POST",
-        body: JSON.stringify({
-          sessionId: activeSession.sessionId,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          accuracyMeters: location.accuracyMeters,
-          capturedAt: location.capturedAt,
-          deviceInstallId,
-        }),
-      });
-      setLastClaimResult(result);
-      notify(`Attendance Registered! (${result.distanceMeters?.toFixed(1)}m from teacher, +/-${result.accuracyMeters?.toFixed(1)}m accuracy)`, "success");
-      await loadAttendance();
-    } catch (error) {
-      notify(error instanceof ApiError ? error.message : `Could not verify GPS location. ${error?.message || "Please enable location permission and try again."}`, "danger");
-    } finally {
-      setClaiming(false);
-    }
-  }
-
-  const isAlreadyAttended = activeSession && attendance.some((r) => r.sessionId === activeSession.sessionId);
-
   return (
     <div style={{ paddingBottom: 100 }}>
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>My Enrolled Classes</h1>
-          <p style={{ color: "#94a3b8", fontSize: "0.82rem", margin: "2px 0 0" }}>
+          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>My Enrolled Classes</h1>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", margin: "4px 0 0" }}>
             Select a class to view attendance records and live GPS sessions.
           </p>
         </div>
-        <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.82rem" }} onClick={loadClasses}>
+        <button type="button" className="btn btn-secondary" style={{ padding: "8px 16px", fontSize: "0.85rem" }} onClick={loadClasses}>
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
-      <div className="panel glass-panel scanner-panel">
-        <h2>
-          <Navigation size={18} /> GPS Attendance Verification
-        </h2>
+      {classes.length === 0 ? (
+        <div className="panel glass-panel" style={{ textAlign: "center", padding: "40px 20px" }}>
+          <BookOpen size={40} style={{ marginBottom: 12, color: "var(--text-muted)" }} />
+          <h3 style={{ fontSize: "1.1rem" }}>No Classes Enrolled Yet</h3>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: 16 }}>
+            Click the "+ JOIN CLASS" button to join your class with a Class Code.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 18 }}>
+          {classes.map((item) => (
+            <div
+              key={item.id}
+              className="panel glass-panel"
+              style={{
+                cursor: "pointer",
+                padding: "20px",
+                transition: "all 0.2s ease",
+              }}
+              onClick={() => navigate(`/student/class/${item.id}`)}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                {item.credits ? (
+                  <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "var(--text-secondary)" }}>{item.credits} Credits</span>
+                ) : <span />}
+                <span className="badge badge-success" style={{ fontSize: "0.75rem", fontFamily: "monospace", padding: "3px 8px" }}>
+                  CODE: {item.code}
+                </span>
+              </div>
 
-        {activeSession ? (
-          <div style={{ textAlign: "center", padding: "18px", background: "#f8fafc", border: "1px solid var(--border-light)", borderRadius: "var(--radius-md)", margin: "12px 0" }}>
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", fontWeight: "700", color: "var(--text-primary)" }}>
-              <MapPin size={18} /> SESSION ACTIVE ({activeSession.radiusMeters || 20}m Radius)
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0 0 6px" }}>
+                {item.subjectName || item.subjectCode}
+              </h3>
+
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", fontWeight: 600, margin: "0 0 6px" }}>
+                {item.subjectCode} &nbsp;•&nbsp; {item.academicSession} {item.semester ? `• ${item.semester}` : ""}
+              </p>
+
+              <p style={{ color: "var(--text-muted)", fontWeight: 600, fontSize: "0.82rem", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 6 }}>
+                <User size={14} /> {item.teacherName || "Faculty"}
+              </p>
+
+              <div style={{ background: "var(--bg-surface-elevated)", border: "1px solid var(--border-light)", padding: "8px 12px", borderRadius: "var(--radius-sm)", fontSize: "0.78rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
+                <Clock size={14} />
+                <span>
+                  Last Session: {item.lastSessionAt ? new Date(item.lastSessionAt).toLocaleString() : "No sessions yet"}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: 12, marginTop: 14, fontSize: "0.82rem", color: "var(--text-secondary)" }}>
+                <span>{item.department}</span>
+                <span style={{ fontWeight: 700, color: "var(--primary)", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  View Attendance Log <ChevronRight size={14} />
+                </span>
+              </div>
             </div>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", margin: "8px 0 14px" }}>
-              Ensure your device GPS location is turned on to mark present.
+          ))}
+        </div>
+      )}
+
+      <div style={{ position: "fixed", bottom: 28, right: 28, zIndex: 9000 }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{
+            padding: "12px 24px",
+            fontSize: "0.95rem",
+            fontWeight: 700,
+            borderRadius: "9999px",
+            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+          onClick={() => setShowJoinModal(true)}
+        >
+          <Plus size={18} /> + JOIN CLASS
+        </button>
+      </div>
+
+      {showJoinModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="panel glass-panel" style={{ width: "min(95vw, 440px)" }}>
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 8 }}>Join New Class</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 16 }}>
+              Enter the Class Code provided by your teacher. Your registration number ({user?.registrationNo || "profile ID"}) will automatically be enrolled.
             </p>
 
-            {isAlreadyAttended ? (
-              <div className="badge badge-success" style={{ padding: "8px 16px", fontSize: "0.9rem" }}>
-                <CircleCheckBig size={16} /> Attendance Verified & Recorded!
+            <form onSubmit={handleJoinClass}>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label className="form-label">Class Code</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. SWE301"
+                  value={classCode}
+                  onChange={(e) => setClassCode(e.target.value.toUpperCase())}
+                  style={{ textTransform: "uppercase", letterSpacing: "2px", fontWeight: 700, fontSize: "1.05rem" }}
+                  maxLength={20}
+                  required
+                />
               </div>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ width: "100%", padding: "12px", fontSize: "0.95rem" }}
-                onClick={handleClaimAttendance}
-                disabled={claiming}
-              >
-                {claiming ? "Verifying GPS Location..." : "Give Attendance (GPS)"}
-              </button>
-            )}
-          </div>
-        ) : (
-          <div style={{ textAlign: "center", padding: "28px 16px", color: "var(--text-muted)" }}>
-            <MapPin size={32} style={{ marginBottom: "8px", opacity: 0.6 }} />
-            <p style={{ fontWeight: "700", color: "var(--text-primary)" }}>No Active Session</p>
-            <p style={{ fontSize: "0.85rem", marginTop: "4px" }}>Select a class above and check when your teacher starts an attendance session.</p>
-          </div>
-        )}
-      </div>
 
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowJoinModal(false)}>
@@ -151,4 +180,5 @@ export default function StudentDashboard() {
     </div>
   );
 }
+
 

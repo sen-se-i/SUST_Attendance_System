@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { ToastProvider } from "./lib/ToastContext";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { SciFiLoadingScreen } from "./components/SciFiLoadingScreen";
 import AuthPage from "./pages/AuthPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherClassDetailPage from "./pages/TeacherClassDetailPage";
@@ -42,15 +41,13 @@ function AppRoutes() {
 }
 
 export default function App() {
-  const [loadingApp, setLoadingApp] = useState(true);
-
   return (
     <AuthProvider>
       <ToastProvider>
-        {loadingApp && <SciFiLoadingScreen onFinished={() => setLoadingApp(false)} minDuration={2200} />}
         <AppRoutes />
       </ToastProvider>
     </AuthProvider>
   );
 }
+
 
