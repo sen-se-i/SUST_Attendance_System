@@ -43,6 +43,33 @@ class ApiService {
     return headers;
   }
 
+  static dynamic _tryDecode(String body) {
+    if (body.trim().isEmpty) return null;
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _extractErrorMessage(http.Response response, String fallback) {
+    if (response.statusCode == 503 || response.statusCode == 502 || response.statusCode == 504) {
+      return 'Server is waking up / deploying on Render. Please wait 30-40 seconds and try again.';
+    }
+    if (response.statusCode == 403) {
+      return 'Access forbidden (403). Invalid credentials or permissions.';
+    }
+    final decoded = _tryDecode(response.body);
+    if (decoded is Map) {
+      if (decoded['message'] != null) return decoded['message'].toString();
+      if (decoded['error'] != null) return decoded['error'].toString();
+    }
+    if (response.body.isNotEmpty && response.body.length < 200) {
+      return response.body;
+    }
+    return '$fallback (${response.statusCode})';
+  }
+
   // -------------------------------------------------------------
   // AUTH
   // -------------------------------------------------------------
@@ -59,14 +86,16 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
+        final body = _tryDecode(response.body);
+        if (body == null) {
+          return ApiResponse(isSuccess: false, message: 'Invalid server response');
+        }
         final token = body['token'] ?? body['accessToken'] ?? '';
         final userJson = body['user'] ?? body;
         UserModel user = UserModel.fromJson(userJson, token);
         return ApiResponse(isSuccess: true, data: user);
       } else {
-        final error = jsonDecode(response.body);
-        return ApiResponse(isSuccess: false, message: error['message'] ?? 'Invalid credentials');
+        return ApiResponse(isSuccess: false, message: _extractErrorMessage(response, 'Invalid credentials'));
       }
     } catch (e) {
       return ApiResponse(isSuccess: false, message: 'Network error: $e');
