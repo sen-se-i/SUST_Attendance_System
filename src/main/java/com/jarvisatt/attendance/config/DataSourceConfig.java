@@ -47,8 +47,8 @@ public class DataSourceConfig {
 
                     String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + path;
                     config.setJdbcUrl(jdbcUrl);
-                    config.setUsername(username);
-                    config.setPassword(password);
+                    if (!username.isBlank()) config.setUsername(username);
+                    if (!password.isBlank()) config.setPassword(password);
                     config.setDriverClassName("org.postgresql.Driver");
                 } catch (Exception e) {
                     config.setJdbcUrl(dbUrl);
@@ -59,8 +59,22 @@ public class DataSourceConfig {
                 if (dbPass != null && !dbPass.isBlank()) config.setPassword(dbPass.trim());
                 config.setDriverClassName("org.postgresql.Driver");
             }
-        } else {
 
+            // Ensure Supabase / PgBouncer compatibility
+            String currentUrl = config.getJdbcUrl();
+            if (currentUrl != null && currentUrl.startsWith("jdbc:postgresql:")) {
+                if (!currentUrl.contains("prepareThreshold")) {
+                    currentUrl += (currentUrl.contains("?") ? "&" : "?") + "prepareThreshold=0";
+                    config.setJdbcUrl(currentUrl);
+                }
+                config.addDataSourceProperty("prepareThreshold", "0");
+                config.addDataSourceProperty("preferQueryMode", "simple");
+                config.addDataSourceProperty("preparedStatementCacheQueries", "0");
+                config.addDataSourceProperty("preparedStatementCacheSizeMiB", "0");
+                config.setMaximumPoolSize(10);
+                config.setMinimumIdle(2);
+            }
+        } else {
             config.setJdbcUrl("jdbc:h2:file:./data/jarvis_db;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;AUTO_SERVER=TRUE");
             config.setUsername("sa");
             config.setPassword("");
