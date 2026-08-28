@@ -17,14 +17,8 @@ import java.util.List;
 public class ClassController {
     private final ClassService classService;
 
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    ClassResponse create(@Valid @RequestBody CreateClassRequest request, @AuthenticationPrincipal UserPrincipal principal) {
-        return classService.create(request, principal);
-    }
-
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     List<ClassResponse> list(@AuthenticationPrincipal UserPrincipal principal) {
         return classService.teacherClasses(principal);
     }

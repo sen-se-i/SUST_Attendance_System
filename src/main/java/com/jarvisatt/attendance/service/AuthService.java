@@ -7,6 +7,8 @@ import com.jarvisatt.attendance.dto.AuthDtos.*;
 import com.jarvisatt.attendance.exception.ApiException;
 import com.jarvisatt.attendance.repository.UserRepository;
 import com.jarvisatt.attendance.repository.DeviceRepository;
+import com.jarvisatt.attendance.repository.EnrollmentRepository;
+import com.jarvisatt.attendance.repository.AttendanceRecordRepository;
 import com.jarvisatt.attendance.security.JwtService;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -76,8 +78,11 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email().trim().toLowerCase())
+        String loginIdentifier = request.email().trim();
+        User user = userRepository.findByEmail(loginIdentifier.toLowerCase())
+                .or(() -> userRepository.findByRegistrationNo(loginIdentifier))
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
@@ -105,7 +110,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public UserProfileResponse profile(UserPrincipal principal) {
         User user = userRepository.findById(principal.id()).orElseThrow();
-        String dept = user.getRole() == Role.STUDENT ? "Software Engineering" : "Software Engineering / Faculty";
+        String dept = user.getDepartment() != null ? user.getDepartment() : (user.getRole() == Role.STUDENT ? "Software Engineering" : "Software Engineering / Faculty");
         return new UserProfileResponse(user.getId(), user.getEmail(), user.getRole(), user.getRegistrationNo(), dept);
     }
 

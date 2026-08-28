@@ -13,6 +13,9 @@ public interface ClassRepository extends JpaRepository<ClassEntity, UUID> {
     Optional<ClassEntity> findFirstByCodeIgnoreCase(String code);
     Optional<ClassEntity> findFirstBySubjectCodeIgnoreCase(String subjectCode);
     List<ClassEntity> findByTeacherId(UUID teacherId);
+    List<ClassEntity> findByTeacherIdAndStatus(UUID teacherId, String status);
+    List<ClassEntity> findByStatus(String status);
+    List<ClassEntity> findAllByOrderByCreatedAtDesc();
     boolean existsByTeacherIdAndAcademicSessionAndSemesterAndSubjectCode(UUID teacherId, String academicSession, String semester, String subjectCode);
 }
 

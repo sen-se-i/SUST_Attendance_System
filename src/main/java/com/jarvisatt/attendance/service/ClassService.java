@@ -1,80 +1,68 @@
 package com.jarvisatt.attendance.service;
 
-import com.jarvisatt.attendance.domain.ClassEntity;
-import com.jarvisatt.attendance.domain.User;
+import com.jarvisatt.attendance.domain.*;
 import com.jarvisatt.attendance.dto.ClassDtos.*;
 import com.jarvisatt.attendance.exception.ApiException;
-import com.jarvisatt.attendance.repository.ClassRepository;
-import com.jarvisatt.attendance.repository.UserRepository;
+import com.jarvisatt.attendance.repository.*;
 import com.jarvisatt.attendance.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ClassService {
-    private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private final SecureRandom random = new SecureRandom();
     private final ClassRepository classRepository;
     private final UserRepository userRepository;
-    private final com.jarvisatt.attendance.repository.EnrollmentRepository enrollmentRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final ClassSessionRepository classSessionRepository;
 
     @Transactional(readOnly = true)
     public List<ClassResponse> studentClasses(UserPrincipal student) {
-        return enrollmentRepository.findByStudentIdAndStatus(student.id(), com.jarvisatt.attendance.domain.EnrollmentStatus.ACTIVE).stream()
-                .map(enrollment -> response(enrollment.getClassEntity()))
+        return enrollmentRepository.findByStudentIdAndStatus(student.id(), EnrollmentStatus.ACTIVE).stream()
+                .map(Enrollment::getClassEntity)
+                .filter(c -> c.getStatus() == null || "ACTIVE".equalsIgnoreCase(c.getStatus()))
+                .map(this::toClassResponse)
                 .toList();
-    }
-
-    @Transactional
-    public ClassResponse create(CreateClassRequest request, UserPrincipal teacher) {
-        User owner = userRepository.findById(teacher.id()).orElseThrow();
-
-        if (request.academicSession() == null || !request.academicSession().matches("^\\d{4}-\\d{2}$")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Session must be in format YYYY-YY (e.g. 2023-24)");
-        }
-
-        if (classRepository.existsByTeacherIdAndAcademicSessionAndSemesterAndSubjectCode(
-                teacher.id(), request.academicSession(), request.semester(), request.subjectCode())) {
-            throw new ApiException(HttpStatus.CONFLICT,
-                "Class already exists for subject " + request.subjectCode() + " in session " + request.academicSession() + " (" + request.semester() + ")");
-        }
-
-        ClassEntity entity = new ClassEntity();
-        entity.setCode(generateClassCode(request.department(), request.academicSession(), request.semester(), request.subjectCode()));
-        entity.setDepartment(request.department());
-        entity.setAcademicSession(request.academicSession());
-        entity.setSemester(request.semester());
-        entity.setSubjectCode(request.subjectCode());
-        entity.setSubjectName(request.subjectName());
-        entity.setCredits(request.credits());
-        entity.setTeacher(owner);
-        classRepository.save(entity);
-        return response(entity);
-    }
-
-    @Transactional(readOnly = true)
-    public ClassEntity ownedClass(java.util.UUID classId, UserPrincipal teacher) {
-        ClassEntity entity = classRepository.findById(classId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Class not found"));
-        if (!entity.getTeacher().getId().equals(teacher.id())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "You do not own this class");
-        }
-        return entity;
     }
 
     @Transactional(readOnly = true)
     public List<ClassResponse> teacherClasses(UserPrincipal teacher) {
-        return classRepository.findByTeacherId(teacher.id()).stream().map(this::response).toList();
+        if (teacher.role() == Role.ADMIN) {
+            return classRepository.findAllByOrderByCreatedAtDesc().stream()
+                    .map(this::toClassResponse)
+                    .toList();
+        }
+        return classRepository.findByTeacherId(teacher.id()).stream()
+                .filter(c -> c.getStatus() == null || "ACTIVE".equalsIgnoreCase(c.getStatus()))
+                .map(this::toClassResponse)
+                .toList();
     }
 
-    private String generateClassCode(String department, String academicSession, String semester, String subjectCode) {
+    @Transactional(readOnly = true)
+    public List<ClassResponse> allClassesForAdmin() {
+        return classRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(this::toClassResponse)
+                .toList();
+    }
 
+    @Transactional(readOnly = true)
+    public ClassEntity ownedClass(UUID classId, UserPrincipal principal) {
+        ClassEntity entity = classRepository.findById(classId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Class not found"));
+        if (principal.role() != Role.ADMIN) {
+            if (entity.getTeacher() == null || !entity.getTeacher().getId().equals(principal.id())) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "You do not own this class");
+            }
+        }
+        return entity;
+    }
+
+    public String generateClassCode(String department, String academicSession, String semester, String subjectCode) {
         String deptPrefix = "SWE";
         if (department != null) {
             String cleanDept = department.trim().toUpperCase();
@@ -149,27 +137,35 @@ public class ClassService {
         return candidate;
     }
 
-    private final com.jarvisatt.attendance.repository.ClassSessionRepository classSessionRepository;
-
-    private ClassResponse response(ClassEntity entity) {
+    public ClassResponse toClassResponse(ClassEntity entity) {
         String teacherName = entity.getTeacher() != null ? entity.getTeacher().getEmail() : "Faculty";
+        UUID teacherId = entity.getTeacher() != null ? entity.getTeacher().getId() : null;
+
         java.time.OffsetDateTime lastSessionAt = classSessionRepository
                 .findFirstByClassEntityIdOrderByStartedAtDesc(entity.getId())
-                .map(com.jarvisatt.attendance.domain.ClassSession::getStartedAt)
+                .map(ClassSession::getStartedAt)
                 .orElse(null);
 
+        List<Enrollment> enrollments = enrollmentRepository.findByClassEntityIdAndStatus(entity.getId(), EnrollmentStatus.ACTIVE);
+        int enrolledCount = enrollments.size();
+        List<ClassSession> sessions = classSessionRepository.findByClassEntityIdOrderByStartedAtDesc(entity.getId());
+        int totalSessions = sessions.size();
+
         return new ClassResponse(
-            entity.getId(),
-            entity.getCode(),
-            entity.getDepartment(),
-            entity.getAcademicSession(),
-            entity.getSemester(),
-            entity.getSubjectCode(),
-            entity.getSubjectName(),
-            entity.getCredits(),
-            teacherName,
-            lastSessionAt
+                entity.getId(),
+                entity.getCode(),
+                entity.getDepartment(),
+                entity.getAcademicSession(),
+                entity.getSemester(),
+                entity.getSubjectCode(),
+                entity.getSubjectName(),
+                entity.getCredits(),
+                teacherName,
+                teacherId,
+                entity.getStatus() != null ? entity.getStatus() : "ACTIVE",
+                enrolledCount,
+                totalSessions,
+                lastSessionAt
         );
     }
 }
-

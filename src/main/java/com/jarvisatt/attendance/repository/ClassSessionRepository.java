@@ -15,6 +15,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
     Optional<ClassSession> findFirstByClassEntityIdAndStatus(UUID classId, ClassSessionStatus status);
     Optional<ClassSession> findFirstByClassEntityIdOrderByStartedAtDesc(UUID classId);
     java.util.List<ClassSession> findByClassEntityIdOrderByStartedAtDesc(UUID classId);
+    java.util.List<ClassSession> findByClassEntityIdOrderByStartedAtAsc(UUID classId);
 
     @Modifying
     @Query("update ClassSession s set s.status = :ended, s.endedAt = :now where s.status = :active")

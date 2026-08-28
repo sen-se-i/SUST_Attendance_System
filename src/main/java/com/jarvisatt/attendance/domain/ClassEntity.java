@@ -43,6 +43,9 @@ public class ClassEntity {
     @JoinColumn(name = "teacher_id")
     private User teacher;
 
+    @Column(name = "status")
+    private String status = "ACTIVE";
+
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }

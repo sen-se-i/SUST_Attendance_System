@@ -10,113 +10,96 @@ class RadiusSliderWidget extends StatelessWidget {
     required this.onChanged,
   }) : super(key: key);
 
-  static const List<double> presetRadii = [20.0, 50.0, 100.0];
+  static const List<double> radiusOptions = [
+    20.0,
+    30.0,
+    40.0,
+    50.0,
+    60.0,
+    70.0,
+    80.0,
+    90.0,
+    100.0,
+  ];
 
   @override
   Widget build(BuildContext context) {
+    // Ensure selectedRadius matches one of the options
+    final currentVal = radiusOptions.contains(selectedRadius)
+        ? selectedRadius
+        : 30.0;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1520),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF213042)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: const Color(0xFF0D0D0D),
+        border: Border.all(color: const Color(0xFF2A2A2A)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: const [
-                  Icon(Icons.radar_rounded, color: Color(0xFF00E6FF), size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Geofence Radius',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
+              const Text(
+                'GEOFENCE RADIUS',
+                style: TextStyle(
+                  color: Color(0xFF888888),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
+                ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF00E6FF), Color(0xFF00E6FF)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
+                  color: const Color(0xFF1A1A1A),
+                  border: Border.all(color: Colors.white),
                 ),
                 child: Text(
-                  '${selectedRadius.toInt()} Meters',
+                  '${currentVal.toInt()}M ACTIVE',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 10,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          SliderTheme(
-            data: SliderThemeData(
-              activeTrackColor: const Color(0xFF00E6FF),
-              inactiveTrackColor: const Color(0xFF213042),
-              thumbColor: const Color(0xFF00E6FF),
-              overlayColor: const Color(0xFF00E6FF).withOpacity(0.2),
-              valueIndicatorTextStyle: const TextStyle(color: Colors.white),
-            ),
-            child: Slider(
-              value: selectedRadius,
-              min: 20.0,
-              max: 100.0,
-              divisions: 16,
-              label: '${selectedRadius.toInt()}m',
-              onChanged: onChanged,
-            ),
-          ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: presetRadii.map((r) {
-              final isSelected = (selectedRadius - r).abs() < 0.5;
-              return GestureDetector(
-                onTap: () => onChanged(r),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF00E6FF) : const Color(0xFF070B12),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isSelected ? const Color(0xFF00E6FF) : const Color(0xFF213042),
-                    ),
-                  ),
-                  child: Text(
-                    '${r.toInt()}m',
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey[400],
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      fontSize: 12,
-                    ),
-                  ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFF000000),
+              border: Border.all(color: const Color(0xFF333333)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<double>(
+                value: currentVal,
+                dropdownColor: const Color(0xFF141414),
+                isExpanded: true,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
                 ),
-              );
-            }).toList(),
+                items: radiusOptions.map((r) {
+                  return DropdownMenuItem<double>(
+                    value: r,
+                    child: Text('${r.toInt()} METERS (${r.toInt()}M)'),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    onChanged(val);
+                  }
+                },
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 }
-

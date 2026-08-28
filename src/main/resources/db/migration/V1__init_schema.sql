@@ -1,7 +1,7 @@
 CREATE TABLE users (
     id UUID PRIMARY KEY,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'STUDENT')),
-    email TEXT NOT NULL UNIQUE,
+    role VARCHAR(20) NOT NULL,
+    email TEXT UNIQUE,
     password_hash TEXT NOT NULL,
     registration_no TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -10,43 +10,37 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController(text: 'teacher@example.com');
+  final _emailController = TextEditingController(text: 'admin@example.com');
   final _passwordController = TextEditingController(text: 'password');
-  final _regNoController = TextEditingController();
-  bool _isLogin = true;
-  String _selectedRole = 'STUDENT';
 
   void _submit() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final email = _emailController.text.trim();
+    final emailOrReg = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (emailOrReg.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all credentials')),
+        const SnackBar(
+          content: Text('Please enter registration no / email and password'),
+          backgroundColor: Color(0xFF222222),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        ),
       );
       return;
     }
 
-    bool success;
-    if (_isLogin) {
-      success = await auth.login(email, password);
-    } else {
-      success = await auth.register(
-        email: email,
-        password: password,
-        role: _selectedRole,
-        registrationNo: _selectedRole == 'STUDENT' ? _regNoController.text.trim() : null,
-      );
-    }
+    final success = await auth.login(emailOrReg, password);
 
     if (!mounted) return;
 
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(auth.errorMessage ?? 'Authentication failed'),
+          content: Text(auth.errorMessage ?? 'Invalid credentials. Please verify your info.'),
           backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         ),
       );
     }
@@ -65,238 +59,215 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-
+                // Minimalist Square Text Badge Logo
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF0D1520),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF00E6FF).withOpacity(0.35),
-                        blurRadius: 20,
-                        spreadRadius: 3,
-                      ),
-                    ],
+                    color: const Color(0xFF111111),
+                    border: Border.all(color: const Color(0xFFFFFFFF), width: 1.5),
                   ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/logo.png',
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.contain,
+                  child: const Text(
+                    'SUST',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 4.0,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFF00E6FF), Color(0xFF00FF88)],
-                  ).createShader(bounds),
-                  child: const Text(
-                    'SWE Attendance System',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.2,
-                    ),
+                const SizedBox(height: 18),
+                const Text(
+                  'ATTENDANCE SYSTEM',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 2.0,
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  'GPS Geofenced Classroom Attendance System',
+                const Text(
+                  'GPS Geofenced Classroom Attendance Portal',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 13,
+                    color: Color(0xFF888888),
+                    fontSize: 12,
+                    letterSpacing: 0.5,
                   ),
                 ),
                 const SizedBox(height: 36),
 
+                // Main Login Form - Sharp Square Box
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0D1520),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF213042)),
+                    color: const Color(0xFF0D0D0D),
+                    border: Border.all(color: const Color(0xFF2A2A2A), width: 1),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _isLogin ? 'Sign In' : 'Create Account',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'PORTAL SIGN IN',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1F1F1F),
+                              border: Border.all(color: const Color(0xFF444444)),
+                            ),
+                            child: const Text(
+                              'AUTH',
+                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
+                      // Email / Reg No Field
+                      const Text('EMAIL OR REGISTRATION NUMBER', style: TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: _emailController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Email Address',
-                          labelStyle: TextStyle(color: Colors.grey[400]),
-                          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF00E6FF)),
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        decoration: const InputDecoration(
+                          hintText: 'admin@example.com or 2023831001',
+                          hintStyle: TextStyle(color: Color(0xFF555555)),
                           filled: true,
-                          fillColor: const Color(0xFF070B12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF213042)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF213042)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF00E6FF)),
-                          ),
+                          fillColor: Color(0xFF000000),
                         ),
                       ),
                       const SizedBox(height: 16),
 
+                      // Password Field
+                      const Text('PASSWORD', style: TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: _passwordController,
                         obscureText: true,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: TextStyle(color: Colors.grey[400]),
-                          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF00E6FF)),
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        decoration: const InputDecoration(
+                          hintText: '••••••••',
+                          hintStyle: TextStyle(color: Color(0xFF555555)),
                           filled: true,
-                          fillColor: const Color(0xFF070B12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF213042)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF213042)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF00E6FF)),
-                          ),
+                          fillColor: Color(0xFF000000),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
 
-                      if (!_isLogin) ...[
-                        DropdownButtonFormField<String>(
-                          value: _selectedRole,
-                          dropdownColor: const Color(0xFF0D1520),
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: 'Account Role',
-                            labelStyle: TextStyle(color: Colors.grey[400]),
-                            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF00E6FF)),
-                            filled: true,
-                            fillColor: const Color(0xFF070B12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFF213042)),
-                            ),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'STUDENT', child: Text('Student')),
-                            DropdownMenuItem(value: 'ADMIN', child: Text('Teacher / Admin')),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) setState(() => _selectedRole = val);
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        if (_selectedRole == 'STUDENT') ...[
-                          TextField(
-                            controller: _regNoController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              labelText: 'Registration Number',
-                              labelStyle: TextStyle(color: Colors.grey[400]),
-                              prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF00E6FF)),
-                              filled: true,
-                              fillColor: const Color(0xFF070B12),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Color(0xFF213042)),
+                      // 1-Click Demo Accounts for 3 Distinct Roles - Pure Clean Boxes
+                      const Text('1-CLICK DEMO ACCOUNTS:', style: TextStyle(color: Color(0xFF666666), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8)),
+                      const SizedBox(height: 8),
+                      Column(
+                        children: [
+                          Row(
+                            children: [
+                              // Admin Demo Button
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _emailController.text = 'admin@example.com';
+                                      _passwordController.text = 'password';
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 11),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF161616),
+                                      border: Border.all(color: const Color(0xFF444444)),
+                                    ),
+                                    child: const Text('ADMIN DEMO', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                  ),
+                                ),
                               ),
+                              const SizedBox(width: 8),
+                              // Teacher Demo Button
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _emailController.text = 'teacher@example.com';
+                                      _passwordController.text = 'password';
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 11),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF161616),
+                                      border: Border.all(color: const Color(0xFF444444)),
+                                    ),
+                                    child: const Text('TEACHER DEMO', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          // Student Demo Button
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _emailController.text = '2023831001';
+                                _passwordController.text = '2023831001';
+                              });
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF161616),
+                                border: Border.all(color: const Color(0xFF444444)),
+                              ),
+                              child: const Text('STUDENT DEMO (2023831001)', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                             ),
                           ),
-                          const SizedBox(height: 16),
                         ],
-                      ],
+                      ),
+                      const SizedBox(height: 28),
 
-                      if (_isLogin) ...[
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ActionChip(
-                              backgroundColor: const Color(0xFF162232),
-                              avatar: const Icon(Icons.school, size: 16, color: Color(0xFF00E6FF)),
-                              label: const Text('Teacher Demo', style: TextStyle(color: Colors.white, fontSize: 11)),
-                              onPressed: () {
-                                _emailController.text = 'teacher@example.com';
-                                _passwordController.text = 'password';
-                              },
-                            ),
-                            ActionChip(
-                              backgroundColor: const Color(0xFF162232),
-                              avatar: const Icon(Icons.person, size: 16, color: Color(0xFF00FF88)),
-                              label: const Text('Student Demo', style: TextStyle(color: Colors.white, fontSize: 11)),
-                              onPressed: () {
-                                _emailController.text = 'ch.wixard@student.sust.edu';
-                                _passwordController.text = 'password';
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-
+                      // Sign In Button - Sharp Square
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
                           onPressed: auth.isLoading ? null : _submit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00E6FF),
-                            foregroundColor: const Color(0xFF030712),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            backgroundColor: const Color(0xFFFFFFFF),
+                            foregroundColor: const Color(0xFF000000),
+                            elevation: 0,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.zero,
                             ),
                           ),
                           child: auth.isLoading
                               ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(color: Color(0xFF030712), strokeWidth: 2),
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
                                 )
-                              : Text(
-                                  _isLogin ? 'Sign In' : 'Register Account',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF030712),
+                              : const Text(
+                                  'SIGN IN',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.2,
                                   ),
                                 ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      Center(
-                        child: TextButton(
-                          onPressed: () => setState(() => _isLogin = !_isLogin),
-                          child: Text(
-                            _isLogin
-                                ? "Don't have an account? Register"
-                                : 'Already have an account? Sign In',
-                            style: const TextStyle(color: Color(0xFF00E6FF)),
-                          ),
                         ),
                       ),
                     ],
@@ -310,4 +281,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

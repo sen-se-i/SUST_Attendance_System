@@ -22,7 +22,7 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
 
     @Column(name = "password_hash", nullable = false)
@@ -30,6 +30,12 @@ public class User {
 
     @Column(name = "registration_no")
     private String registrationNo;
+
+    @Column(name = "department")
+    private String department;
+
+    @Column(name = "academic_session")
+    private String academicSession;
 
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private OffsetDateTime createdAt;

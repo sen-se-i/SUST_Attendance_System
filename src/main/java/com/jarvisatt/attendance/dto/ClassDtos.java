@@ -13,7 +13,8 @@ public final class ClassDtos {
         @NotBlank String semester,
         @NotBlank String subjectCode,
         String subjectName,
-        Double credits
+        Double credits,
+        UUID teacherId
     ) {}
 
     public record ClassResponse(
@@ -26,22 +27,34 @@ public final class ClassDtos {
         String subjectName,
         Double credits,
         String teacherName,
+        UUID teacherId,
+        String status,
+        int enrolledCount,
+        int totalSessions,
         java.time.OffsetDateTime lastSessionAt
     ) {}
 
-    public record RosterRequest(java.util.List<@NotBlank String> registrationNos) {}
-    public record JoinClassDirectRequest(String classCode, String code) {
-        public JoinClassDirectRequest(String classCode) {
-            this(classCode, null);
-        }
-        public String effectiveCode() {
-            if (classCode != null && !classCode.isBlank()) return classCode.trim();
-            if (code != null && !code.isBlank()) return code.trim();
-            return "";
-        }
-    }
-    public record JoinClassResponse(UUID enrollmentId, UUID classId, String status) {}
-    public record EnrolledStudentResponse(String registrationNo, String name, String status, java.time.OffsetDateTime joinedAt) {}
-    public record RosterEntryResponse(String registrationNo, boolean joined) {}
+    public record AddStudentRequest(@NotBlank String registrationNo) {}
+    public record AddStudentsBatchRequest(java.util.List<@NotBlank String> registrationNos) {}
+    public record ClassStudentResponse(String registrationNo, String email, String status, java.time.OffsetDateTime joinedAt) {}
+
+    public record SessionColumn(UUID sessionId, java.time.OffsetDateTime startedAt, int attendanceCount) {}
+    public record StudentRow(String registrationNo, java.util.List<Boolean> attendance, int totalAttended, double percentage) {}
+    public record MatrixReportResponse(
+        UUID classId,
+        String classCode,
+        String subjectName,
+        String subjectCode,
+        String department,
+        String academicSession,
+        String semester,
+        String teacherName,
+        int totalSessions,
+        int totalStudents,
+        double averageAttendancePercentage,
+        java.util.List<SessionColumn> sessions,
+        java.util.List<StudentRow> studentRows,
+        java.util.List<Integer> sessionAttendanceCounts
+    ) {}
 }
 

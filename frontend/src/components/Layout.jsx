@@ -14,7 +14,7 @@ export function Layout({ children }) {
           <div>
             <h1>SWE Attendance System</h1>
             <p className="subtitle">
-              {user ? `${user.role === "ADMIN" ? "Teacher" : "Student"} Console` : "GPS Location Attendance"}
+              {user ? `${user.role === "ADMIN" ? "Admin" : user.role === "TEACHER" ? "Teacher" : "Student"} Console` : "GPS Location Attendance"}
             </p>
           </div>
         </div>

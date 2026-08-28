@@ -23,10 +23,17 @@ public class JwtService {
 
     public String issue(UserPrincipal principal) {
         Instant now = Instant.now();
+        String subject = principal.email() != null && !principal.email().isBlank()
+                ? principal.email().trim().toLowerCase()
+                : (principal.registrationNo() != null && !principal.registrationNo().isBlank()
+                    ? principal.registrationNo().trim()
+                    : principal.id().toString());
+
         return Jwts.builder()
-                .subject(principal.email())
+                .subject(subject)
                 .claim("uid", principal.id().toString())
                 .claim("role", principal.role().name())
+                .claim("reg", principal.registrationNo())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(properties.ttl())))
                 .signWith(key)
@@ -37,8 +44,12 @@ public class JwtService {
         return claims(token).getSubject();
     }
 
+    public String getUserId(String token) {
+        Object uid = claims(token).get("uid");
+        return uid != null ? uid.toString() : null;
+    }
+
     private Claims claims(String token) {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
     }
 }
-

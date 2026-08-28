@@ -4,16 +4,17 @@ import {
   ArrowLeft,
   Calendar,
   Clock,
-  MapPin,
   RefreshCw,
   Smartphone,
-  KeyRound,
   Trash2,
   Users,
   AlertTriangle,
   ChevronRight,
-  Square,
-  Play,
+  Plus,
+  FileSpreadsheet,
+  Printer,
+  X,
+  UserPlus,
   CheckCircle2,
 } from "lucide-react";
 import { api, ApiError } from "../lib/api";
@@ -37,7 +38,13 @@ export default function TeacherClassDetailPage() {
   const [showAdvance, setShowAdvance] = useState(false);
   const [selectedRecordIds, setSelectedRecordIds] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ open: false, type: null, data: null });
-  const [deleteSessionModal, setDeleteSessionModal] = useState({ open: false, sessionId: null });
+
+  // Add Student Modal
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [newStudentRegNo, setNewStudentRegNo] = useState("");
+
+  // Matrix Report Modal
+  const [matrixModal, setMatrixModal] = useState({ open: false, data: null, loading: false });
 
   const loadData = useCallback(async () => {
     try {
@@ -101,6 +108,27 @@ export default function TeacherClassDetailPage() {
     }
   }
 
+  async function handleAddStudent(e) {
+    e.preventDefault();
+    if (!newStudentRegNo.trim()) return;
+
+    setBusy(true);
+    try {
+      await api(`/api/classes/${classId}/students`, {
+        method: "POST",
+        body: JSON.stringify({ registrationNo: newStudentRegNo.trim() }),
+      });
+      notify(`Student ${newStudentRegNo.trim()} added to class`, "success");
+      setNewStudentRegNo("");
+      setShowAddStudentModal(false);
+      await loadData();
+    } catch (error) {
+      notify(error instanceof ApiError ? error.message : "Failed to add student", "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function openStudentModal(student) {
     setSelectedStudent(student);
     setShowAdvance(false);
@@ -155,7 +183,7 @@ export default function TeacherClassDetailPage() {
       type: "REMOVE_STUDENT",
       data: student,
       title: `Remove ${student.registrationNo} from Class?`,
-      message: `Are you sure you want to remove student ${student.registrationNo} from this class? They will no longer be able to submit attendance for this class, and their attendance history in this class will be deleted.`,
+      message: `Are you sure you want to remove student ${student.registrationNo} from this class? They will no longer see this class, and their attendance history in this class will be deleted.`,
     });
   }
 
@@ -189,13 +217,39 @@ export default function TeacherClassDetailPage() {
     setSelectedRecordIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   }
 
+  // Open Matrix Report
+  async function openMatrixReport() {
+    setMatrixModal({ open: true, data: null, loading: true });
+    try {
+      const report = await api(`/api/classes/${classId}/report/matrix`);
+      setMatrixModal({ open: true, data: report, loading: false });
+    } catch (error) {
+      notify(error instanceof ApiError ? error.message : "Failed to generate matrix report", "danger");
+      setMatrixModal({ open: false, data: null, loading: false });
+    }
+  }
+
   return (
     <div style={{ paddingBottom: 60 }}>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={() => navigate("/teacher")}>
-          <ArrowLeft size={15} /> Back to Dashboard
+      {/* Back and Action Bar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={() => navigate(-1)}>
+          <ArrowLeft size={15} /> Back
         </button>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: "6px 14px", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: 6, color: "#00E6FF", borderColor: "rgba(0, 230, 255, 0.4)" }}
+            onClick={openMatrixReport}
+          >
+            <FileSpreadsheet size={15} /> Export Attendance Matrix
+          </button>
+          <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={loadData}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </div>
       </div>
 
       {classInfo && (
@@ -222,6 +276,7 @@ export default function TeacherClassDetailPage() {
         </div>
       )}
 
+      {/* GPS Attendance Controls Panel */}
       <SessionPanel
         session={activeSession}
         busy={busy}
@@ -230,12 +285,13 @@ export default function TeacherClassDetailPage() {
         onFinished={handleStopSession}
       />
 
+      {/* Session History Section */}
       <div className="panel glass-panel" style={{ marginTop: 20, border: "1px solid #213042", padding: 18 }}>
         <h2 style={{ fontSize: "1.15rem", marginBottom: 4 }}>
           <Calendar size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Class Session History
         </h2>
         <p style={{ color: "#94a3b8", fontSize: "0.8rem", marginBottom: 14 }}>
-          Past sessions conducted. Click "View Logs" to see student attendance or delete the session.
+          Past GPS attendance sessions conducted. Click "View Logs" to see verified student records.
         </p>
 
         {historySessions.length === 0 ? (
@@ -290,16 +346,26 @@ export default function TeacherClassDetailPage() {
         )}
       </div>
 
+      {/* Enrolled Students Section */}
       <div className="panel glass-panel" style={{ marginTop: 20, border: "1px solid #213042", padding: 18 }}>
-        <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>
-          <Users size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Active Students ({enrolledStudents.length})
-        </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>
+            <Users size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Enrolled Students ({enrolledStudents.length})
+          </h2>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: "6px 12px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 6, color: "#00FF88", borderColor: "rgba(0, 255, 136, 0.4)" }}
+            onClick={() => setShowAddStudentModal(true)}
+          >
+            <UserPlus size={14} /> + Add Student
+          </button>
+        </div>
 
         {enrolledStudents.length === 0 ? (
           <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8", fontSize: "0.85rem" }}>
             <Users size={28} style={{ opacity: 0.3, marginBottom: 8 }} />
-            <p style={{ margin: 0 }}>No students have joined yet.</p>
-            <p style={{ margin: "4px 0 0", fontSize: "0.78rem" }}>Share the class code with students so they can join.</p>
+            <p style={{ margin: 0 }}>No students enrolled in this class.</p>
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
@@ -309,7 +375,7 @@ export default function TeacherClassDetailPage() {
                   <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>#</th>
                   <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Registration No</th>
                   <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Status</th>
-                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Joined At</th>
+                  <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Enrolled At</th>
                   <th style={{ padding: "8px 10px", fontSize: "0.8rem" }}>Actions</th>
                 </tr>
               </thead>
@@ -332,7 +398,7 @@ export default function TeacherClassDetailPage() {
                           style={{ padding: "3px 10px", fontSize: "0.75rem", color: "#00E6FF" }}
                           onClick={() => openStudentModal(s)}
                         >
-                          Manage
+                          History
                         </button>
                         <button
                           type="button"
@@ -353,12 +419,45 @@ export default function TeacherClassDetailPage() {
         )}
       </div>
 
+      {/* ADD STUDENT MODAL */}
+      {showAddStudentModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
+          <div className="panel glass-panel" style={{ width: "min(95vw, 420px)", border: "1px solid #00E6FF", padding: 22 }}>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff", margin: "0 0 8px" }}>Add Student to Class</h3>
+            <p style={{ color: "#94a3b8", fontSize: "0.82rem", margin: "0 0 16px" }}>
+              Enter the student's registration number to manually enroll them in this class.
+            </p>
+            <form onSubmit={handleAddStudent}>
+              <div className="form-group" style={{ marginBottom: 18 }}>
+                <label className="form-label">Registration Number</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. 2023831018"
+                  value={newStudentRegNo}
+                  onChange={(e) => setNewStudentRegNo(e.target.value.trim())}
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddStudentModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={busy || !newStudentRegNo.trim()}>
+                  Add Student
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* STUDENT HISTORY MODAL */}
       {selectedStudent && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
           <div className="panel glass-panel" style={{ width: "min(95vw, 620px)", maxHeight: "90vh", overflowY: "auto", border: "1px solid #00E6FF", padding: 20 }}>
             <div style={{ borderBottom: "1px solid #213042", paddingBottom: 10, marginBottom: 14 }}>
-
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 900, color: "#00E6FF", margin: 0, letterSpacing: "0.5px" }}>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 900, color: "#00E6FF", margin: 0 }}>
                 {selectedStudent.registrationNo}
               </h2>
               <p style={{ color: "#94a3b8", fontSize: "0.75rem", margin: "2px 0 0" }}>CLASS ID: {classId}</p>
@@ -366,31 +465,7 @@ export default function TeacherClassDetailPage() {
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
               <button type="button" className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", color: "#00FF88", borderColor: "rgba(0, 255, 136, 0.4)" }} onClick={handleResetDevice} disabled={busy}>
-                <Smartphone size={14} /> Reset Device
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: "6px 12px", fontSize: "0.8rem", color: "#00E6FF", borderColor: "rgba(0, 230, 255, 0.4)" }}
-                onClick={async () => {
-                  const newPass = prompt(`Enter new password for student ${selectedStudent.registrationNo}:`, "123456");
-                  if (!newPass || !newPass.trim()) return;
-                  setBusy(true);
-                  try {
-                    await api("/api/auth/reset-password", {
-                      method: "POST",
-                      body: JSON.stringify({ registrationNo: selectedStudent.registrationNo, newPassword: newPass.trim() }),
-                    });
-                    notify(`Password reset to "${newPass.trim()}" for student ${selectedStudent.registrationNo}`, "success");
-                  } catch (error) {
-                    notify(error instanceof ApiError ? error.message : "Failed to reset password", "danger");
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-                disabled={busy}
-              >
-                <KeyRound size={14} /> Reset Password
+                <Smartphone size={14} /> Reset Device ID
               </button>
               <button
                 type="button"
@@ -417,7 +492,7 @@ export default function TeacherClassDetailPage() {
                   <AlertTriangle size={16} /> Danger Zone Deletion Controls
                 </h4>
                 <p style={{ color: "#cbd5e1", fontSize: "0.8rem", marginBottom: 10 }}>
-                  Deleting history will permanently remove attendance records for this student.
+                  Deleting history will permanently remove attendance records for this student in this class.
                 </p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button
@@ -496,6 +571,134 @@ export default function TeacherClassDetailPage() {
         </div>
       )}
 
+      {/* MATRIX ATTENDANCE REPORT MODAL */}
+      {matrixModal.open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="panel glass-panel" style={{ width: "min(98vw, 1100px)", maxHeight: "92vh", overflowY: "auto", border: "1px solid #00E6FF", padding: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #213042", paddingBottom: 14, marginBottom: 16 }}>
+              <div>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 900, color: "#ffffff", margin: 0 }}>
+                  Attendance Matrix Report
+                </h2>
+                {matrixModal.data && (
+                  <p style={{ color: "#00E6FF", fontSize: "0.85rem", margin: "4px 0 0", fontWeight: 600 }}>
+                    {matrixModal.data.subjectName} ({matrixModal.data.classCode}) • {matrixModal.data.department} • {matrixModal.data.academicSession}
+                  </p>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {matrixModal.data && (
+                  <>
+                    <a
+                      href={`/api/classes/${matrixModal.data.classId}/report/csv`}
+                      className="btn btn-secondary"
+                      style={{ padding: "6px 12px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 6, color: "#00FF88", borderColor: "rgba(0, 255, 136, 0.4)" }}
+                      download
+                    >
+                      <FileSpreadsheet size={14} /> Download CSV
+                    </a>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: "6px 12px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 6, color: "#00E6FF", borderColor: "rgba(0, 230, 255, 0.4)" }}
+                      onClick={() => window.print()}
+                    >
+                      <Printer size={14} /> Print
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: "6px 10px" }}
+                  onClick={() => setMatrixModal({ open: false, data: null, loading: false })}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {matrixModal.loading || !matrixModal.data ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Generating attendance matrix...</div>
+            ) : (
+              <div>
+                {/* Summary Metrics */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
+                  <div style={{ background: "#090F17", border: "1px solid #213042", padding: "10px 14px", borderRadius: 8 }}>
+                    <span style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block" }}>TOTAL SESSIONS</span>
+                    <strong style={{ color: "#00E6FF", fontSize: "1.2rem" }}>{matrixModal.data.totalSessions}</strong>
+                  </div>
+                  <div style={{ background: "#090F17", border: "1px solid #213042", padding: "10px 14px", borderRadius: 8 }}>
+                    <span style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block" }}>TOTAL STUDENTS</span>
+                    <strong style={{ color: "#ffffff", fontSize: "1.2rem" }}>{matrixModal.data.totalStudents}</strong>
+                  </div>
+                  <div style={{ background: "#090F17", border: "1px solid #213042", padding: "10px 14px", borderRadius: 8 }}>
+                    <span style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block" }}>AVERAGE ATTENDANCE</span>
+                    <strong style={{ color: "#00FF88", fontSize: "1.2rem" }}>{matrixModal.data.averageAttendancePercentage}%</strong>
+                  </div>
+                </div>
+
+                {/* Matrix Table */}
+                <div style={{ overflowX: "auto", border: "1px solid #213042", borderRadius: 10 }}>
+                  <table className="table" style={{ width: "100%", fontSize: "0.82rem", textAlign: "center", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "#0D1520", borderBottom: "2px solid #00E6FF" }}>
+                        <th style={{ padding: "10px 12px", textAlign: "left", color: "#00E6FF", position: "sticky", left: 0, background: "#0D1520", zIndex: 2 }}>
+                          Student Reg No
+                        </th>
+                        {matrixModal.data.sessions.map((sess) => {
+                          const dateObj = new Date(sess.startedAt);
+                          return (
+                            <th key={sess.sessionId} style={{ padding: "8px 10px", fontSize: "0.75rem", color: "#ffffff", minWidth: 95 }}>
+                              <div>{dateObj.toLocaleDateString()}</div>
+                              <div style={{ color: "#94a3b8", fontSize: "0.7rem" }}>{dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                            </th>
+                          );
+                        })}
+                        <th style={{ padding: "8px 12px", color: "#00FF88", minWidth: 80 }}>Total</th>
+                        <th style={{ padding: "8px 12px", color: "#00FF88", minWidth: 80 }}>%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matrixModal.data.studentRows.map((row, rIdx) => (
+                        <tr key={row.registrationNo} style={{ borderBottom: "1px solid #213042", background: rIdx % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent" }}>
+                          <td style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, fontFamily: "monospace", color: "#ffffff", position: "sticky", left: 0, background: "#090F17", zIndex: 1 }}>
+                            {row.registrationNo}
+                          </td>
+                          {row.attendance.map((present, aIdx) => (
+                            <td key={aIdx} style={{ padding: "8px", fontWeight: 800, color: present ? "#00FF88" : "#ef4444" }}>
+                              {present ? "P" : "A"}
+                            </td>
+                          ))}
+                          <td style={{ padding: "8px 12px", fontWeight: 800, color: "#ffffff" }}>{row.totalAttended}</td>
+                          <td style={{ padding: "8px 12px", fontWeight: 800, color: row.percentage >= 75 ? "#00FF88" : row.percentage >= 50 ? "#fbbf24" : "#ef4444" }}>
+                            {row.percentage}%
+                          </td>
+                        </tr>
+                      ))}
+                      {/* Summary Row */}
+                      <tr style={{ background: "#0D1520", borderTop: "2px solid #213042", fontWeight: 800 }}>
+                        <td style={{ padding: "10px 12px", textAlign: "left", color: "#00E6FF", position: "sticky", left: 0, background: "#0D1520" }}>
+                          Total Present
+                        </td>
+                        {matrixModal.data.sessionAttendanceCounts.map((count, cIdx) => (
+                          <td key={cIdx} style={{ padding: "8px", color: "#00FF88" }}>
+                            {count}
+                          </td>
+                        ))}
+                        <td style={{ padding: "8px 12px" }}>-</td>
+                        <td style={{ padding: "8px 12px" }}>-</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION DELETION MODAL */}
       {confirmModal.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
           <div className="panel glass-panel" style={{ width: "min(90vw, 420px)", border: "2px solid #ef4444", textAlign: "center", padding: 22 }}>
@@ -522,4 +725,3 @@ export default function TeacherClassDetailPage() {
     </div>
   );
 }
-

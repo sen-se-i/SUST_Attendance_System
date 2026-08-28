@@ -27,14 +27,14 @@ export async function api(path, options = {}) {
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   let response;
+  const baseUrl = getApiBaseUrl();
   try {
-    const baseUrl = getApiBaseUrl();
     response = await fetch(`${baseUrl}${path}`, { ...options, headers, signal: controller.signal });
   } catch (error) {
     if (error.name === "AbortError") {
       throw new ApiError("The server took too long to respond. It may be waking up — please try again.");
     }
-    throw new ApiError("Could not reach the server. Please ensure the backend is running at http://localhost:8080 and try again.");
+    throw new ApiError(`Could not reach the server (${baseUrl}). Please ensure the backend is active and try again.`);
   } finally {
     clearTimeout(timeout);
   }

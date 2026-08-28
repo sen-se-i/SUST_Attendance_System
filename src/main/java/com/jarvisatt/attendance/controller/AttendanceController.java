@@ -37,37 +37,37 @@ public class AttendanceController {
     }
 
     @GetMapping("/classes/{classId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     List<AttendanceRecordResponse> classHistory(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
         return attendanceService.classHistory(classId, principal);
     }
 
     @GetMapping("/classes/{classId}/students/{studentId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     List<AttendanceRecordResponse> studentClassHistory(@PathVariable UUID classId, @PathVariable UUID studentId) {
         return attendanceService.studentClassHistory(classId, studentId);
     }
 
     @PostMapping("/students/{studentId}/reset-device")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     void resetDevice(@PathVariable UUID studentId) {
         attendanceService.resetStudentDevice(studentId);
     }
 
     @DeleteMapping("/classes/{classId}/students/{studentId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     void deleteStudentClassHistory(@PathVariable UUID classId, @PathVariable UUID studentId) {
         attendanceService.deleteStudentClassHistory(classId, studentId);
     }
 
     @DeleteMapping("/records/{recordId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     void deleteRecord(@PathVariable UUID recordId) {
         attendanceService.deleteAttendanceRecord(recordId);
     }
 
     @PostMapping("/records/batch-delete")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     void deleteBatchRecords(@RequestBody List<UUID> recordIds) {
         attendanceService.deleteBatchAttendanceRecords(recordIds);
     }

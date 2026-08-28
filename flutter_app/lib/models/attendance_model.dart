@@ -8,6 +8,7 @@ class AttendanceRecordModel {
   final double latitude;
   final double longitude;
   final double accuracyMeters;
+  final String? deviceInstallId;
   final DateTime scannedAt;
 
   AttendanceRecordModel({
@@ -20,6 +21,7 @@ class AttendanceRecordModel {
     required this.latitude,
     required this.longitude,
     required this.accuracyMeters,
+    this.deviceInstallId,
     required this.scannedAt,
   });
 
@@ -34,6 +36,7 @@ class AttendanceRecordModel {
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       accuracyMeters: (json['accuracyMeters'] as num?)?.toDouble() ?? 0.0,
+      deviceInstallId: json['deviceInstallId'] as String?,
       scannedAt: json['scannedAt'] != null ? DateTime.parse(json['scannedAt']) : DateTime.now(),
     );
   }

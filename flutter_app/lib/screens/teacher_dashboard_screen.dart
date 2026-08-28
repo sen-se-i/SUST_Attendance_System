@@ -1,71 +1,86 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
+import '../services/location_service.dart';
 import '../models/class_model.dart';
 import '../models/session_model.dart';
 import '../models/attendance_model.dart';
-import '../data/subject_catalog.dart';
+import '../widgets/location_radar_widget.dart';
+import '../widgets/radius_slider_widget.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({Key? key}) : super(key: key);
 
-  @override:
+  @override
   State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
 }
 
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   List<ClassModel> _classes = [];
-  bool _isLoading = false;
+  bool _isLoadingClasses = false;
   ClassModel? _selectedClass;
+
+  // Active Session State
   SessionModel? _activeSession;
   List<AttendanceRecordModel> _sessionRecords = [];
-  double _selectedRadius = 20.0;
-  bool _isLoadingClasses = true;
-  bool _isStartingSession = false;
   Timer? _timer;
-  int _remainingSeconds = 150;
+  int _remainingSeconds = 0;
+  double _selectedRadius = 30.0;
+  bool _isStartingSession = false;
 
   @override
   void initState() {
     super.initState();
-    _loadClasses();
+    _loadTeacherClasses();
   }
 
-  Future<void> _loadClasses() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadTeacherClasses() async {
+    setState(() => _isLoadingClasses = true);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final res = await ApiService.getClasses(auth.token, true);
     if (mounted) {
       setState(() {
-        _isLoading = false;
+        _isLoadingClasses = false;
         if (res.isSuccess && res.data != null) {
-          _classes = res.data!;
+          // Filter only ACTIVE classes assigned to teacher
+          _classes = res.data!.where((c) => c.status == null || c.status!.toUpperCase() == 'ACTIVE').toList();
+          if (_classes.isNotEmpty && _selectedClass == null) {
+            _selectedClass = _classes.first;
+            _checkActiveSession();
+          }
         }
       });
     }
   }
 
-  Future<void> _loadClassDetails(ClassModel item) async {
-    setState(() {
-      _selectedClass = item;
-      _isLoading = true;
-    });
+  Future<void> _checkActiveSession() async {
+    if (_selectedClass == null) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final res = await ApiService.getClassHistory(auth.token, item.id);
+    final response = await ApiService.getActiveSession(auth.token, _selectedClass!.id);
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-        if (res.isSuccess && res.data != null) {
-          _classRecords = res.data!;
-
-          _sessionGroups = {};
-          for (var r in _classRecords) {
-            _sessionGroups.putIfAbsent(r.sessionId, () => []).add(r);
-          }
-        }
-      });
+      if (response.isSuccess && response.data != null && response.data!.isActive) {
+        setState(() {
+          _activeSession = response.data!;
+          _remainingSeconds = _activeSession!.remainingSeconds;
+        });
+        _startTimer();
+        _loadSessionRecords();
+      } else {
+        setState(() {
+          _activeSession = null;
+          _sessionRecords = [];
+        });
+      }
     }
   }
 
@@ -76,7 +91,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         setState(() {
           _remainingSeconds--;
         });
-        _fetchSessionRecords();
+        if (_remainingSeconds % 3 == 0) {
+          _loadSessionRecords();
+        }
       } else {
         _timer?.cancel();
         setState(() {
@@ -86,24 +103,34 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     });
   }
 
+  Future<void> _loadSessionRecords() async {
+    if (_activeSession == null) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final res = await ApiService.getSessionRecords(auth.token, _activeSession!.sessionId);
+    if (mounted && res.isSuccess && res.data != null) {
+      setState(() {
+        _sessionRecords = res.data!;
+      });
+    }
+  }
+
   Future<void> _startSession() async {
-    if (_selectedClass == null) return;
+    if (_selectedClass == null) {
+      _showToast('Please select a class first.');
+      return;
+    }
     setState(() => _isStartingSession = true);
 
-    // Get teacher's current GPS position
     final loc = await LocationService.getCurrentLocation(radiusMeters: _selectedRadius);
     if (loc.error != null) {
       setState(() => _isStartingSession = false);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.error!), backgroundColor: Colors.redAccent),
-      );
+      _showToast(loc.error!, isError: true);
       return;
     }
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final response = await ApiService.startGpsSession(
-      token: auth.currentUser!.token,
+      token: auth.token,
       classId: _selectedClass!.id,
       latitude: loc.latitude,
       longitude: loc.longitude,
@@ -116,36 +143,69 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
     if (response.isSuccess && response.data != null) {
       setState(() {
-        _activeSession = response.data;
-        _remainingSeconds = 150;
+        _activeSession = response.data!;
+        _remainingSeconds = _activeSession!.remainingSeconds;
         _sessionRecords = [];
       });
       _startTimer();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('GPS Session Started! Radius: ${_selectedRadius.toInt()}m, accuracy: +/-${loc.accuracyMeters.toStringAsFixed(1)}m'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      _showToast('GPS Session started (${_selectedRadius.toInt()}m radius)');
     } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message ?? 'Failed to start session'), backgroundColor: Colors.redAccent),
-      );
+      _showToast(response.message ?? 'Failed to start session', isError: true);
     }
   }
 
-  void _openStudentControlDialog(String registrationNo) {
+  Future<void> _stopSession() async {
+    if (_activeSession == null) return;
+    _timer?.cancel();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    await ApiService.stopSession(auth.token, _activeSession!.sessionId);
+    if (mounted) {
+      setState(() {
+        _activeSession = null;
+      });
+      _showToast('Attendance session stopped.');
+    }
+  }
+
+  void _showToast(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.redAccent : const Color(0xFF222222),
+        behavior: SnackBarBehavior.floating,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // DIALOG: MANAGE CLASS STUDENTS (ADD / REMOVE)
+  // -------------------------------------------------------------
+  void _openManageStudentsDialog() async {
+    if (_selectedClass == null) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
     showDialog(
       context: context,
-      builder: (ctx) => _StudentControlDialog(
-        classId: _selectedClass!.id,
-        registrationNo: registrationNo,
-        allRecords: _classRecords.where((r) => r.registrationNo == registrationNo).toList(),
-        onRefresh: () {
-          if (_selectedClass != null) _loadClassDetails(_selectedClass!);
-        },
+      builder: (ctx) => _ClassStudentsDialog(
+        classItem: _selectedClass!,
+        token: auth.token,
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // DIALOG: MATRIX ATTENDANCE REPORT & CSV EXPORT
+  // -------------------------------------------------------------
+  void _openMatrixReportDialog() async {
+    if (_selectedClass == null) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => _MatrixReportDialog(
+        classItem: _selectedClass!,
+        token: auth.token,
       ),
     );
   }
@@ -157,925 +217,716 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1520),
+        backgroundColor: const Color(0xFF0D0D0D),
         elevation: 0,
-        title: Row(
-          children: const [
-            Icon(Icons.radar, color: Color(0xFF00E6FF)),
-            SizedBox(width: 8),
-            Text(
-              'SWE-Attendance (Teacher)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-          ],
+        shape: const Border(bottom: BorderSide(color: Color(0xFF2A2A2A))),
+        title: const Text(
+          'TEACHER PORTAL',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.5),
         ),
-        leading: _selectedClass != null
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF00E6FF)),
-                onPressed: () => setState(() => _selectedClass = null),
-              )
-            : null,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF00E6FF)),
-            onPressed: () {
-              if (_selectedClass != null) {
-                _loadClassDetails(_selectedClass!);
-              } else {
-                _loadClasses();
-              }
-            },
+          // Text box button: RELOAD
+          InkWell(
+            onTap: () => _loadTeacherClasses(),
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF161616),
+                border: Border.all(color: const Color(0xFF444444)),
+              ),
+              child: const Text('RELOAD', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.redAccent),
-            onPressed: () => auth.logout(),
+          // Text box button: LOGOUT
+          InkWell(
+            onTap: () => auth.logout(),
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF220000),
+                border: Border.all(color: Colors.redAccent),
+              ),
+              child: const Text('LOGOUT', style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+            ),
           ),
         ],
       ),
       body: _isLoadingClasses
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00E6FF)))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAlignment.start,
-                children: [
-                  // Class Selector Dropdown
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D1520),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF213042)),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<ClassModel>(
-                        value: _selectedClass,
-                        dropdownColor: const Color(0xFF0D1520),
-                        isExpanded: true,
-                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF00E6FF)),
-                        items: _classes.map((c) {
-                          return DropdownMenuItem<ClassModel>(
-                            value: c,
-                            child: Text(
-                              '${c.subjectCode} - ${c.department} (${c.code})',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedClass = val;
-                            _activeSession = null;
-                            _sessionRecords = [];
-                          });
-                          _checkActiveSession();
-                        },
-                      ),
-                    ),
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+          : (_classes.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('NO ASSIGNED CLASSES', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                      SizedBox(height: 8),
+                      Text('Please contact Admin to assign courses to your faculty account.', style: TextStyle(color: Color(0xFF888888), fontSize: 13)),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-
-                  // Session Control Card
-                  if (_activeSession == null) ...[
-                    // Radius Selection Widget
-                    RadiusSliderWidget(
-                      selectedRadius: _selectedRadius,
-                      onChanged: (val) => setState(() => _selectedRadius = val),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Start GPS Session Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _isStartingSession ? null : _startSession,
-                        icon: _isStartingSession
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Icon(Icons.play_arrow_rounded, size: 28),
-                        label: Text(
-                          _isStartingSession ? 'Capturing Location...' : 'Start GPS Session (${_selectedRadius.toInt()}m)',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Class Selector Dropdown - Sharp Square
+                      const Text('SELECT ASSIGNED CLASS', style: TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.8)),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0D0D0D),
+                          border: Border.all(color: const Color(0xFF2A2A2A)),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00E6FF),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<ClassModel>(
+                            value: _selectedClass,
+                            dropdownColor: const Color(0xFF141414),
+                            isExpanded: true,
+                            items: _classes.map((c) {
+                              return DropdownMenuItem<ClassModel>(
+                                value: c,
+                                child: Text(
+                                  '${c.subjectCode} - ${c.subjectName ?? c.department} [${c.academicSession}]',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedClass = val;
+                                _activeSession = null;
+                                _sessionRecords = [];
+                              });
+                              _checkActiveSession();
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                  ] else ...[
-                    // Active Session Card
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF00E6FF)),
-                      ),
-                      child: Column(
+                      const SizedBox(height: 16),
+
+                      // Quick Action Buttons: Manage Students & Matrix Report (Clean Text Buttons)
+                      Row(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _openManageStudentsDialog,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(color: Color(0xFF444444)),
+                                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text('STUDENTS (ENROLLMENT)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _openMatrixReportDialog,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(color: Color(0xFF444444)),
+                                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text('MATRIX REPORT (CSV)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // GPS Session Control
+                      if (_activeSession == null) ...[
+                        RadiusSliderWidget(
+                          selectedRadius: _selectedRadius,
+                          onChanged: (val) => setState(() => _selectedRadius = val),
+                        ),
+                        const SizedBox(height: 16),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: _isStartingSession ? null : _startSession,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              elevation: 0,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                            ),
+                            child: _isStartingSession
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                                : Text(
+                                    'START GPS ATTENDANCE (${_selectedRadius.toInt()}M)',
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+                                  ),
+                          ),
+                        ),
+                      ] else ...[
+                        // Active Session Running Box
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0D0D0D),
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: Column(
                             children: [
                               Row(
-                                children: const [
-                                  Icon(Icons.sensors_rounded, color: Colors.greenAccent),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'ACTIVE SESSION',
-                                    style: TextStyle(
-                                      color: Colors.greenAccent,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      letterSpacing: 1.1,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'SESSION ACTIVE',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1.2),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF222222),
+                                      border: Border.all(color: Colors.white),
+                                    ),
+                                    child: Text(
+                                      '${_remainingSeconds}S REMAINING',
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11),
                                     ),
                                   ),
                                 ],
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.redAccent.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.redAccent),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.timer_outlined, color: Colors.redAccent, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${_remainingSeconds}s',
-                                      style: const TextStyle(
-                                        color: Colors.redAccent,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
+                              const SizedBox(height: 16),
+                              LocationRadarWidget(
+                                isScanning: true,
+                                radiusMeters: _activeSession!.radiusMeters,
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _metricBox('GEOFENCE', '${_activeSession!.radiusMeters.toInt()}M'),
+                                  _metricBox('PRESENT', '${_sessionRecords.length} STUDENTS'),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 46,
+                                child: OutlinedButton(
+                                  onPressed: _stopSession,
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.redAccent),
+                                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                  ),
+                                  child: const Text('STOP SESSION NOW', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w900, letterSpacing: 0.8)),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          LocationRadarWidget(
-                            isScanning: true,
-                            radiusMeters: _activeSession!.radiusMeters,
+                        ),
+                      ],
+
+                      const SizedBox(height: 28),
+
+                      // Live Check-ins Feed
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'LIVE ATTENDANCE FEED',
+                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.0),
                           ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _metricBadge('Radius', '${_activeSession!.radiusMeters.toInt()} meters'),
-                              _metricBadge('Checked In', '${_sessionRecords.length} Students'),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: _stopSession,
-                              icon: const Icon(Icons.stop_circle_rounded, color: Colors.redAccent),
-                              label: const Text('End Session Now', style: TextStyle(color: Colors.redAccent)),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Colors.redAccent),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A1A1A),
+                              border: Border.all(color: const Color(0xFF444444)),
+                            ),
+                            child: Text(
+                              '${_sessionRecords.length} RECORDED',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
 
-                  const SizedBox(height: 28),
-
-                  // Attendance Live Feed Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _activeSession != null ? 'Live Attendance Feed' : 'Class Attendance Log',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF162232),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${_sessionRecords.length} Present',
-                          style: const TextStyle(color: Color(0xFF00E6FF), fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  if (_sessionRecords.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(32),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D1520),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        children: const [
-                          Icon(Icons.person_search_rounded, color: Colors.grey, size: 40),
-                          SizedBox(height: 8),
-                          Text(
-                            'No student check-ins recorded yet.',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _sessionRecords.length,
-                      itemBuilder: (context, index) {
-                        final rec = _sessionRecords[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(16),
+                      if (_sessionRecords.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0D1520),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF213042)),
+                            color: const Color(0xFF0D0D0D),
+                            border: Border.all(color: const Color(0xFF2A2A2A)),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
+                          child: const Text('No student check-ins recorded in current session.', style: TextStyle(color: Color(0xFF777777), fontSize: 12)),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _sessionRecords.length,
+                          itemBuilder: (context, index) {
+                            final rec = _sessionRecords[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0D0D0D),
+                                border: Border.all(color: const Color(0xFF2A2A2A)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  CircleAvatar(
-                                    backgroundColor: const Color(0xFF00E6FF).withOpacity(0.2),
-                                    child: const Icon(Icons.person_rounded, color: Color(0xFF00E6FF)),
-                                  ),
-                                  const SizedBox(width: 12),
                                   Column(
-                                    crossAxisAlignment: CrossAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Reg: ${rec.registrationNo}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        rec.registrationNo,
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         'Distance: ${rec.distanceMeters.toStringAsFixed(1)}m from teacher',
-                                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                                        style: const TextStyle(color: Color(0xFF888888), fontSize: 11),
                                       ),
                                     ],
                                   ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(color: const Color(0xFF1A1A1A), border: Border.all(color: Colors.white)),
+                                    child: const Text('VERIFIED', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                                  ),
                                 ],
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.green),
-                                ),
-                                child: const Text(
-                                  'VERIFIED',
-                                  style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                ],
-              ),
-            )
-          : null,
-    );
-  }
-
-  Widget _buildActiveClassesGrid() {
-    if (_classes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.menu_book, size: 64, color: Color(0xFF213042)),
-            const SizedBox(height: 16),
-            const Text('No Active Classes Created', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('Tap "+ CREATE CLASS" below to add your first course.', style: TextStyle(color: Color(0xFF94A3B8))),
-          ],
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Active Classes', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          const Text('Select a class to manage sessions & attendance.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _classes.length,
-              itemBuilder: (context, index) {
-                final item = _classes[index];
-                return GestureDetector(
-                  onTap: () => _loadClassDetails(item),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D1520),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF213042)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF00FF88).withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFF00FF88)),
-                              ),
-                              child: Text('CODE: ${item.code}', style: const TextStyle(color: Color(0xFF00FF88), fontWeight: FontWeight.bold, fontSize: 12)),
-                            ),
-                            if (item.credits != null)
-                              Text('${item.credits} Credits', style: const TextStyle(color: Color(0xFF00E6FF), fontWeight: FontWeight.bold)),
-                          ],
+                            );
+                          },
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          item.subjectName ?? item.subjectCode,
-                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${item.subjectCode} • ${item.academicSession} • ${item.semester ?? "Semester N/A"}',
-                          style: const TextStyle(color: Color(0xFF00E6FF), fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        const Divider(color: Color(0xFF213042), height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(item.department, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                            const Row(
-                              children: [
-                                Text('Open Details', style: TextStyle(color: Color(0xFF00E6FF), fontWeight: FontWeight.bold, fontSize: 13)),
-                                Icon(Icons.chevron_right, color: Color(0xFF00E6FF), size: 18),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+                )),
     );
   }
 
-  Widget _buildClassDetailView() {
-    final students = _classRecords.map((r) => r.registrationNo).toSet().toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+  Widget _metricBox(String label, String val) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        border: Border.all(color: const Color(0xFF333333)),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D1520),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF00E6FF).withOpacity(0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_selectedClass!.subjectName ?? _selectedClass!.subjectCode, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text('${_selectedClass!.department} • ${_selectedClass!.academicSession}', style: const TextStyle(color: Color(0xFF00E6FF), fontSize: 14, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(6)),
-                      child: Text('JOIN CODE: ${_selectedClass!.code}', style: const TextStyle(color: Color(0xFF00FF88), fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          const Text('Class Session History', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          _sessionGroups.isEmpty
-              ? const Text('No attendance sessions taken yet.', style: TextStyle(color: Color(0xFF94A3B8)))
-              : ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _sessionGroups.keys.length,
-                  itemBuilder: (ctx, idx) {
-                    final sId = _sessionGroups.keys.elementAt(idx);
-                    final recs = _sessionGroups[sId]!;
-                    final time = recs.isNotEmpty ? DateFormat('yyyy-MM-dd HH:mm').format(recs.first.scannedAt.toLocal()) : 'N/A';
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D1520),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF213042)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.access_time, color: Color(0xFF00E6FF), size: 16),
-                              const SizedBox(width: 8),
-                              Text(time, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                          Text('${recs.length} Verified', style: const TextStyle(color: Color(0xFF00FF88), fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-          const SizedBox(height: 24),
-
-          const Text('Class Roster & Controls', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          students.isEmpty
-              ? const Text('No student records found.', style: TextStyle(color: Color(0xFF94A3B8)))
-              : ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: students.length,
-                  itemBuilder: (ctx, idx) {
-                    final regNo = students[idx];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D1520),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF213042)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(regNo, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF213042),
-                              foregroundColor: const Color(0xFF00E6FF),
-                            ),
-                            onPressed: () => _openStudentControlDialog(regNo),
-                            child: const Text('Manage Student'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+          Text(label, style: const TextStyle(color: Color(0xFF888888), fontSize: 10, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
         ],
       ),
     );
   }
 }
 
-class _CreateClassDialog extends StatefulWidget {
-  final List<ClassModel> existingClasses;
-  final Function(ClassModel) onCreated;
+// -------------------------------------------------------------
+// CLASS STUDENTS MANAGEMENT DIALOG (ADD / REMOVE STUDENTS)
+// -------------------------------------------------------------
+class _ClassStudentsDialog extends StatefulWidget {
+  final ClassModel classItem;
+  final String token;
 
-  const _CreateClassDialog({Key? key, required this.existingClasses, required this.onCreated}) : super(key: key);
+  const _ClassStudentsDialog({Key? key, required this.classItem, required this.token}) : super(key: key);
 
-  @override:
-  State<_CreateClassDialog> createState() => _CreateClassDialogState();
+  @override
+  State<_ClassStudentsDialog> createState() => _ClassStudentsDialogState();
 }
 
-class _CreateClassDialogState extends State<_CreateClassDialog> {
-  String _department = SubjectCatalog.departments.first;
-  String _academicSession = '2023-24';
-  String _semester = SubjectCatalog.semesters.first;
-  String _subjectCode = '';
-  String _subjectName = '';
-  double _credits = 3.0;
-
-  String? _sessionError;
-  String? _duplicateError;
-  bool _isBusy = false;
-  List<SubjectItem> _availableSubjects = [];
+class _ClassStudentsDialogState extends State<_ClassStudentsDialog> {
+  List<Map<String, dynamic>> _students = [];
+  bool _isLoading = true;
+  final _addRegController = TextEditingController();
+  bool _isAdding = false;
 
   @override
   void initState() {
     super.initState();
-    _updateSubjects();
+    _loadStudents();
   }
 
-  void _updateSubjects() {
-    _availableSubjects = SubjectCatalog.getSubjects(_department, _semester);
-    if (_availableSubjects.isNotEmpty) {
-      _subjectCode = _availableSubjects.first.code;
-      _subjectName = _availableSubjects.first.name;
-      _credits = _availableSubjects.first.credits;
-    } else {
-      _subjectCode = '';
-      _subjectName = '';
-      _credits = 3.0;
-    }
-    _checkDuplicate();
-  }
-
-  void _handleSessionChange(String val) {
-    _academicSession = val;
-    final regex = RegExp(r'^\d{4}-\d{2}$');
-    if (val.isNotEmpty && !regex.hasMatch(val)) {
-      _sessionError = 'Format must be YYYY-YY (e.g. 2023-24)';
-    } else {
-      _sessionError = null;
-    }
-    _checkDuplicate();
-    setState(() {});
-  }
-
-  void _checkDuplicate() {
-    if (_department != 'Software Engineering') {
-      _duplicateError = null;
-      return;
-    }
-    final isDup = widget.existingClasses.any(
-      (c) => c.academicSession == _academicSession && c.semester == _semester && c.subjectCode == _subjectCode,
-    );
-    if (isDup) {
-      _duplicateError = 'Class for $_subjectCode in $_academicSession ($_semester) already exists!';
-    } else {
-      _duplicateError = null;
+  Future<void> _loadStudents() async {
+    setState(() => _isLoading = true);
+    final res = await ApiService.getClassStudents(widget.token, widget.classItem.id);
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (res.isSuccess && res.data != null) {
+          _students = res.data!;
+        }
+      });
     }
   }
 
-  Future<void> _submit() async {
-    if (_sessionError != null || _duplicateError != null) return;
-    setState(() => _isBusy = true);
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final res = await ApiService.createClass(
-      token: auth.token,
-      department: _department,
-      academicSession: _academicSession,
-      semester: _semester,
-      subjectCode: _subjectCode,
-      subjectName: _subjectName,
-      credits: _credits,
-    );
-    setState(() => _isBusy = false);
+  Future<void> _handleAddStudent() async {
+    final reg = _addRegController.text.trim();
+    if (reg.isEmpty) return;
 
-    if (res.isSuccess && res.data != null) {
-      Navigator.of(context).pop();
-      widget.onCreated(res.data!);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.message ?? 'Failed to create class')));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF0D1520),
-      title: const Text('Create New Class', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            const Text('Department', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-            DropdownButton<String>(
-              value: _department,
-              isExpanded: true,
-              dropdownColor: const Color(0xFF0D1520),
-              style: const TextStyle(color: Colors.white),
-              items: SubjectCatalog.departments.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _department = val;
-                    _updateSubjects();
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-
-            const Text('Academic Session (Format: YYYY-YY)', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-            TextField(
-              controller: TextEditingController(text: _academicSession)..selection = TextSelection.collapsed(offset: _academicSession.length),
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: '2023-24',
-                hintStyle: const TextStyle(color: Colors.white30),
-                errorText: _sessionError,
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: _duplicateError != null ? Colors.red : const Color(0xFF213042))),
-              ),
-              onChanged: _handleSessionChange,
-            ),
-            const SizedBox(height: 12),
-
-            const Text('Semester', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-            DropdownButton<String>(
-              value: _semester,
-              isExpanded: true,
-              dropdownColor: const Color(0xFF0D1520),
-              style: const TextStyle(color: Colors.white),
-              items: SubjectCatalog.semesters.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _semester = val;
-                    _updateSubjects();
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-
-            const Text('Subject', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-            if (_department != 'Software Engineering')
-              Container(
-                margin: const EdgeInsets.only(top: 6),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), border: Border.all(color: Colors.amber)),
-                child: const Text("subjects for this department hasn't been updated", style: TextStyle(color: Colors.amber, fontSize: 12)),
-              )
-            else
-              DropdownButton<String>(
-                value: _subjectCode,
-                isExpanded: true,
-                dropdownColor: const Color(0xFF0D1520),
-                style: const TextStyle(color: Colors.white),
-                items: _availableSubjects.map((sub) => DropdownMenuItem(value: sub.code, child: Text(sub.name))).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    final found = _availableSubjects.firstWhere((element) => element.code == val);
-                    setState(() {
-                      _subjectCode = found.code;
-                      _subjectName = found.name;
-                      _credits = found.credits;
-                      _checkDuplicate();
-                    });
-                  }
-                },
-              ),
-
-            if (_duplicateError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(_duplicateError!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
-              ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E6FF), foregroundColor: Colors.black),
-          onPressed: _isBusy || _sessionError != null || _duplicateError != null || _subjectCode.isEmpty ? null : _submit,
-          child: const Text('Create Class', style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-      ],
-    );
-  }
-}
-
-class _StudentControlDialog extends StatefulWidget {
-  final String classId;
-  final String registrationNo;
-  final List<AttendanceRecordModel> allRecords;
-  final VoidCallback onRefresh;
-
-  const _StudentControlDialog({
-    Key? key,
-    required this.classId,
-    required this.registrationNo,
-    required this.allRecords,
-    required this.onRefresh,
-  }) : super(key: key);
-
-  @override:
-  State<_StudentControlDialog> createState() => _StudentControlDialogState();
-}
-
-class _StudentControlDialogState extends State<_StudentControlDialog> {
-  bool _showAdvance = false;
-  final List<String> _selectedIds = [];
-  bool _isBusy = false;
-
-  Future<void> _resetDevice() async {
-    setState(() => _isBusy = true);
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final res = await ApiService.resetStudentDevice(auth.token, widget.registrationNo);
-    setState(() => _isBusy = false);
+    setState(() => _isAdding = true);
+    final res = await ApiService.addClassStudent(widget.token, widget.classItem.id, reg);
+    setState(() => _isAdding = false);
 
     if (res.isSuccess) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Device ID reset for ${widget.registrationNo}')));
+      _addRegController.clear();
+      _loadStudents();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Student $reg added to class!'),
+          backgroundColor: const Color(0xFF222222),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        ),
+      );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.message ?? 'Reset failed')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res.message ?? 'Failed to add student'),
+          backgroundColor: Colors.redAccent,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        ),
+      );
     }
   }
 
-  Future<void> _deleteFullHistory() async {
+  Future<void> _handleRemoveStudent(String reg) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0D1520),
-        title: const Text('Delete Full History?', style: TextStyle(color: Colors.redAccent)),
-        content: Text('Permanently delete all records for ${widget.registrationNo}?'),
+        backgroundColor: const Color(0xFF111111),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero, side: BorderSide(color: Color(0xFF333333))),
+        title: Text('REMOVE $reg?', style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w900)),
+        content: Text('Removing $reg will unenroll them and delete their attendance records for this class.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('CANCEL', style: TextStyle(color: Color(0xFF888888), fontWeight: FontWeight.bold)),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete All'),
+            child: const Text('REMOVE', style: TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
       ),
     );
 
     if (confirm == true) {
-      setState(() => _isBusy = true);
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      await ApiService.deleteStudentClassHistory(auth.token, widget.classId, widget.registrationNo);
-      setState(() => _isBusy = false);
-      widget.onRefresh();
-      Navigator.pop(context);
-    }
-  }
-
-  Future<void> _deleteSelectedHistory() async {
-    if (_selectedIds.isEmpty) return;
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0D1520),
-        title: Text('Delete ${_selectedIds.length} Selected Record(s)?', style: const TextStyle(color: Colors.redAccent)),
-        content: const Text('This action cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete Selected'),
+      final res = await ApiService.removeClassStudent(widget.token, widget.classItem.id, reg);
+      if (res.isSuccess) {
+        _loadStudents();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Student $reg removed from class'),
+            backgroundColor: const Color(0xFF222222),
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      setState(() => _isBusy = true);
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      await ApiService.deleteBatchAttendanceRecords(auth.token, _selectedIds);
-      setState(() => _isBusy = false);
-      widget.onRefresh();
-      Navigator.pop(context);
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF0D1520),
+      backgroundColor: const Color(0xFF111111),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero, side: BorderSide(color: Color(0xFF333333))),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          Text(widget.registrationNo, style: const TextStyle(color: Color(0xFF00E6FF), fontSize: 24, fontWeight: FontWeight.w900)),
-
-          Text('CLASS ID: ${widget.classId}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+          Text('ENROLLED STUDENTS (${_students.length})', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text('${widget.classItem.subjectCode} • ${widget.classItem.academicSession}', style: const TextStyle(color: Color(0xFF888888), fontSize: 12)),
         ],
       ),
       content: SizedBox(
         width: double.maxFinite,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FF88).withOpacity(0.2), foregroundColor: const Color(0xFF00FF88)),
-                    icon: const Icon(Icons.smartphone, size: 16),
-                    label: const Text('Reset Device ID'),
-                    onPressed: _isBusy ? null : _resetDevice,
-                  ),
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(foregroundColor: _showAdvance ? Colors.redAccent : Colors.white),
-                    onPressed: () => setState(() => _showAdvance = !_showAdvance),
-                    child: Text(_showAdvance ? 'Hide Advance' : 'Advance'),
-                  ),
-                ],
-              ),
-              if (_showAdvance) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), border: Border.all(color: Colors.red.withOpacity(0.4)), borderRadius: BorderRadius.circular(8)),
-                  child: Column(
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                        onPressed: _isBusy ? null : _deleteFullHistory,
-                        child: const Text('Delete FULL History'),
-                      ),
-                      if (_selectedIds.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
-                          onPressed: _isBusy ? null : _deleteSelectedHistory,
-                          child: Text('Delete Selected (${_selectedIds.length})'),
-                        ),
-                      ],
-                    ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Add Student Row
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _addRegController,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: const InputDecoration(
+                      hintText: 'Reg No (e.g. 2023831099)',
+                      filled: true,
+                      fillColor: Colors.black,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _isAdding ? null : _handleAddStudent,
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
+                  child: _isAdding
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                      : const Text('+ ADD', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
               ],
-              const SizedBox(height: 16),
-              const Align(alignment: Alignment.centerLeft, child: Text('Attendance History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-              const SizedBox(height: 8),
-              widget.allRecords.isEmpty
-                  ? const Text('No history found.', style: TextStyle(color: Color(0xFF94A3B8)))
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: widget.allRecords.length,
-                      itemBuilder: (ctx, idx) {
-                        final item = widget.allRecords[idx];
-                        final isSelected = _selectedIds.contains(item.id);
-                        return ListTile(
-                          dense: true,
-                          leading: _showAdvance
-                              ? Checkbox(
-                                  value: isSelected,
-                                  activeColor: Colors.red,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      if (val == true) {
-                                        _selectedIds.add(item.id);
-                                      } else {
-                                        _selectedIds.remove(item.id);
-                                      }
-                                    });
-                                  },
-                                )
-                              : null,
-                          title: Text(DateFormat('yyyy-MM-dd HH:mm').format(item.scannedAt.toLocal()), style: const TextStyle(color: Colors.white)),
-                          subtitle: Text('Device: ${item.deviceInstallId.length > 12 ? item.deviceInstallId.substring(0, 12) + "..." : item.deviceInstallId}', style: const TextStyle(color: Color(0xFF94A3B8))),
-                        );
-                      },
-                    ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+
+            // Students List
+            SizedBox(
+              height: 300,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                  : (_students.isEmpty
+                      ? const Center(child: Text('No students enrolled in this class.', style: TextStyle(color: Color(0xFF888888))))
+                      : ListView.builder(
+                          itemCount: _students.length,
+                          itemBuilder: (ctx, idx) {
+                            final st = _students[idx];
+                            final reg = st['registrationNo']?.toString() ?? 'N/A';
+                            final totalAttended = st['attendedSessions'] ?? 0;
+                            final attPct = st['attendancePercentage'] ?? 0.0;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(color: const Color(0xFF0D0D0D), border: Border.all(color: const Color(0xFF222222))),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(reg, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                                      const SizedBox(height: 2),
+                                      Text('Attended: $totalAttended ($attPct%)', style: const TextStyle(color: Color(0xFF888888), fontSize: 11)),
+                                    ],
+                                  ),
+                                  InkWell(
+                                    onTap: () => _handleRemoveStudent(reg),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF220000),
+                                        border: Border.all(color: Colors.redAccent),
+                                      ),
+                                      child: const Text('REMOVE', style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.w900)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        )),
+            ),
+          ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('CLOSE', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+        ),
       ],
     );
   }
 }
 
+// -------------------------------------------------------------
+// MATRIX ATTENDANCE REPORT & CSV EXPORT DIALOG
+// -------------------------------------------------------------
+class _MatrixReportDialog extends StatefulWidget {
+  final ClassModel classItem;
+  final String token;
+
+  const _MatrixReportDialog({Key? key, required this.classItem, required this.token}) : super(key: key);
+
+  @override
+  State<_MatrixReportDialog> createState() => _MatrixReportDialogState();
+}
+
+class _MatrixReportDialogState extends State<_MatrixReportDialog> {
+  Map<String, dynamic>? _report;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReport();
+  }
+
+  Future<void> _loadReport() async {
+    setState(() => _isLoading = true);
+    final res = await ApiService.getMatrixReport(widget.token, widget.classItem.id);
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (res.isSuccess && res.data != null) {
+          _report = res.data;
+        }
+      });
+    }
+  }
+
+  Future<void> _copyCsv() async {
+    final res = await ApiService.downloadCsv(widget.token, widget.classItem.id);
+    if (res.isSuccess && res.data != null) {
+      await Clipboard.setData(ClipboardData(text: res.data!));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('CSV Report copied to clipboard!'),
+          backgroundColor: Color(0xFF222222),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF111111),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero, side: BorderSide(color: Color(0xFF333333))),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('MATRIX ATTENDANCE REPORT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+          InkWell(
+            onTap: _copyCsv,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: const Color(0xFF1A1A1A), border: Border.all(color: Colors.white)),
+              child: const Text('COPY CSV', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: Colors.white))
+            : (_report == null
+                ? const Center(child: Text('No attendance records to generate report.', style: TextStyle(color: Color(0xFF888888))))
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Summary Badges
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _summaryCard('SESSIONS', '${_report!['totalSessions'] ?? 0}'),
+                            _summaryCard('STUDENTS', '${_report!['totalStudents'] ?? 0}'),
+                            _summaryCard('AVG ATT %', '${_report!['averageAttendancePercentage'] ?? 0}%'),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Matrix Table View
+                        const Text('ATTENDANCE MATRIX (P: Present, A: Absent)', style: TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 8),
+
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: _buildMatrixTable(_report!),
+                        ),
+                      ],
+                    ),
+                  )),
+      ),
+      actions: [
+        ElevatedButton(
+          onPressed: _copyCsv,
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
+          child: const Text('COPY / EXPORT CSV', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('CLOSE', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
+  Widget _summaryCard(String label, String val) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(color: const Color(0xFF161616), border: Border.all(color: const Color(0xFF333333))),
+      child: Column(
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF888888), fontSize: 10, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMatrixTable(Map<String, dynamic> data) {
+    final List sessions = data['sessions'] ?? [];
+    final List studentRows = data['rows'] ?? [];
+    final List totals = data['sessionTotals'] ?? [];
+
+    return DataTable(
+      headingRowColor: WidgetStateProperty.all(const Color(0xFF1E1E1E)),
+      dataRowColor: WidgetStateProperty.all(const Color(0xFF0D0D0D)),
+      border: TableBorder.all(color: const Color(0xFF2A2A2A)),
+      columns: [
+        const DataColumn(label: Text('REGISTRATION NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
+        ...sessions.map((s) => DataColumn(
+              label: Text(
+                DateFormat('MM-dd HH:mm').format(DateTime.parse(s['date'] ?? DateTime.now().toIso8601String()).toLocal()),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+              ),
+            )),
+        const DataColumn(label: Text('TOTAL / %', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
+      ],
+      rows: [
+        ...studentRows.map((r) {
+          final reg = r['registrationNo']?.toString() ?? '';
+          final Map matrix = r['attendanceMatrix'] ?? {};
+          final totalPresent = r['totalPresent'] ?? 0;
+          final pct = r['percentage'] ?? 0.0;
+
+          return DataRow(cells: [
+            DataCell(Text(reg, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12))),
+            ...sessions.map((s) {
+              final sId = s['sessionId']?.toString() ?? '';
+              final isPresent = matrix[sId] == true;
+              return DataCell(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isPresent ? Colors.green.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.2),
+                    border: Border.all(color: isPresent ? Colors.green : Colors.redAccent),
+                  ),
+                  child: Text(
+                    isPresent ? 'P' : 'A',
+                    style: TextStyle(color: isPresent ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 11),
+                  ),
+                ),
+              );
+            }),
+            DataCell(Text('$totalPresent (${pct.toStringAsFixed(0)}%)', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
+          ]);
+        }),
+        // Bottom Footer Row with Totals
+        DataRow(
+          color: WidgetStateProperty.all(const Color(0xFF1E1E1E)),
+          cells: [
+            const DataCell(Text('TOTAL PRESENT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11))),
+            ...totals.map((t) => DataCell(Text('${t['presentCount'] ?? 0}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11)))),
+            const DataCell(Text('-', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+          ],
+        ),
+      ],
+    );
+  }
+}

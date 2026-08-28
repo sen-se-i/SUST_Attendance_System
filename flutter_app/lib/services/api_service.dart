@@ -7,9 +7,6 @@ import '../models/class_model.dart';
 import '../models/session_model.dart';
 import '../models/attendance_model.dart';
 
-import 'package:flutter/foundation.dart';
-import 'dart:io' show Platform;
-
 class ApiResponse<T> {
   final bool isSuccess;
   final T? data;
@@ -22,7 +19,6 @@ class ApiService {
   static String _customBaseUrl = 'https://jarvis-att.onrender.com';
 
   static String get baseUrl => _customBaseUrl;
-
   static set baseUrl(String url) => _customBaseUrl = url;
 
   static Future<String> getDeviceInstallId() async {
@@ -31,7 +27,7 @@ class ApiService {
     if (id == null) {
       final random = Random.secure();
       final values = List<int>.generate(16, (i) => random.nextInt(256));
-      id = 'flutter-web-' + values.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      id = 'flutter-dev-' + values.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
       await prefs.setString('jarvisatt.deviceInstallId', id);
     }
     return id;
@@ -47,13 +43,16 @@ class ApiService {
     return headers;
   }
 
-  static Future<ApiResponse<UserModel>> login(String email, String password, {String? deviceInstallId}) async {
+  // -------------------------------------------------------------
+  // AUTH
+  // -------------------------------------------------------------
+  static Future<ApiResponse<UserModel>> login(String emailOrRegNo, String password, {String? deviceInstallId}) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/login'),
         headers: _headers(null),
         body: jsonEncode({
-          'email': email,
+          'email': emailOrRegNo.trim(),
           'password': password,
           if (deviceInstallId != null) 'deviceInstallId': deviceInstallId,
         }),
@@ -67,44 +66,177 @@ class ApiService {
         return ApiResponse(isSuccess: true, data: user);
       } else {
         final error = jsonDecode(response.body);
-        return ApiResponse(isSuccess: false, message: error['message'] ?? 'Login failed');
+        return ApiResponse(isSuccess: false, message: error['message'] ?? 'Invalid credentials');
       }
     } catch (e) {
       return ApiResponse(isSuccess: false, message: 'Network error: $e');
     }
   }
 
-  static Future<ApiResponse<UserModel>> register({
-    required String email,
+  // -------------------------------------------------------------
+  // ADMIN SERVICE
+  // -------------------------------------------------------------
+  static Future<ApiResponse<Map<String, dynamic>>> createStudentAdmin({
+    required String token,
+    required String registrationNo,
     required String password,
-    required String role,
-    String? registrationNo,
-    String? deviceInstallId,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/register'),
-        headers: _headers(null),
+        Uri.parse('$baseUrl/api/admin/students'),
+        headers: _headers(token),
         body: jsonEncode({
-          'email': email,
-          'password': password,
-          'role': role,
-          'registrationNo': registrationNo,
-          if (deviceInstallId != null) 'deviceInstallId': deviceInstallId,
+          'registrationNo': registrationNo.trim(),
+          'password': password.trim(),
         }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return login(email, password, deviceInstallId: deviceInstallId);
+        return ApiResponse(isSuccess: true, data: jsonDecode(response.body));
       } else {
-        final error = jsonDecode(response.body);
-        return ApiResponse(isSuccess: false, message: error['message'] ?? 'Registration failed');
+        final err = jsonDecode(response.body);
+        return ApiResponse(isSuccess: false, message: err['message'] ?? 'Failed to create student');
       }
     } catch (e) {
-      return ApiResponse(isSuccess: false, message: 'Network error: $e');
+      return ApiResponse(isSuccess: false, message: 'Error creating student: $e');
     }
   }
 
+  static Future<ApiResponse<Map<String, dynamic>>> createTeacherAdmin({
+    required String token,
+    required String email,
+    required String password,
+    required String department,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/admin/teachers'),
+        headers: _headers(token),
+        body: jsonEncode({
+          'email': email.trim().toLowerCase(),
+          'password': password.trim(),
+          'department': department.trim(),
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ApiResponse(isSuccess: true, data: jsonDecode(response.body));
+      } else {
+        final err = jsonDecode(response.body);
+        return ApiResponse(isSuccess: false, message: err['message'] ?? 'Failed to create teacher');
+      }
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error creating teacher: $e');
+    }
+  }
+
+  static Future<ApiResponse<List<Map<String, dynamic>>>> listTeachersAdmin(String token, {String? department}) async {
+    try {
+      String url = '$baseUrl/api/admin/teachers';
+      if (department != null && department.isNotEmpty && department != 'All Departments') {
+        url += '?department=${Uri.encodeComponent(department)}';
+      }
+      final response = await http.get(Uri.parse(url), headers: _headers(token));
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body);
+        return ApiResponse(isSuccess: true, data: list.cast<Map<String, dynamic>>());
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to load teachers');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error loading teachers: $e');
+    }
+  }
+
+  static Future<ApiResponse<ClassModel>> createClassAdmin({
+    required String token,
+    required String department,
+    required String academicSession,
+    required String semester,
+    required String subjectCode,
+    required String subjectName,
+    required double credits,
+    required String teacherId,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/admin/classes'),
+        headers: _headers(token),
+        body: jsonEncode({
+          'department': department,
+          'academicSession': academicSession,
+          'semester': semester,
+          'subjectCode': subjectCode,
+          'subjectName': subjectName,
+          'credits': credits,
+          'teacherId': teacherId,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ApiResponse(isSuccess: true, data: ClassModel.fromJson(jsonDecode(response.body)));
+      } else {
+        final err = jsonDecode(response.body);
+        return ApiResponse(isSuccess: false, message: err['message'] ?? 'Failed to create class');
+      }
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error creating class: $e');
+    }
+  }
+
+  static Future<ApiResponse<List<ClassModel>>> listAllClassesAdmin(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/admin/classes'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body);
+        return ApiResponse(isSuccess: true, data: list.map((item) => ClassModel.fromJson(item)).toList());
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to load admin classes');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error: $e');
+    }
+  }
+
+  static Future<ApiResponse<void>> endClassAdmin(String token, String classId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/admin/classes/$classId/end'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true);
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to end class');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error: $e');
+    }
+  }
+
+  static Future<ApiResponse<void>> adminResetPassword(String token, String identifier, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/admin/users/reset-password'),
+        headers: _headers(token),
+        body: jsonEncode({
+          'identifier': identifier.trim(),
+          'newPassword': newPassword.trim(),
+        }),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true);
+      }
+      final err = jsonDecode(response.body);
+      return ApiResponse(isSuccess: false, message: err['message'] ?? 'Failed to reset password');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error: $e');
+    }
+  }
+
+  // -------------------------------------------------------------
+  // TEACHER & STUDENT CLASSES
+  // -------------------------------------------------------------
   static Future<ApiResponse<List<ClassModel>>> getClasses(String token, bool isTeacher) async {
     try {
       final endpoint = isTeacher ? '/api/classes' : '/api/classes/enrolled';
@@ -125,6 +257,94 @@ class ApiService {
     }
   }
 
+  // -------------------------------------------------------------
+  // CLASS STUDENT MANAGEMENT (Add/Remove from Class)
+  // -------------------------------------------------------------
+  static Future<ApiResponse<List<Map<String, dynamic>>>> getClassStudents(String token, String classId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/classes/$classId/students'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body);
+        return ApiResponse(isSuccess: true, data: list.cast<Map<String, dynamic>>());
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to load class students');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error: $e');
+    }
+  }
+
+  static Future<ApiResponse<void>> addClassStudent(String token, String classId, String registrationNo) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/classes/$classId/students'),
+        headers: _headers(token),
+        body: jsonEncode({'registrationNo': registrationNo.trim()}),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true);
+      }
+      final err = jsonDecode(response.body);
+      return ApiResponse(isSuccess: false, message: err['message'] ?? 'Failed to add student');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error: $e');
+    }
+  }
+
+  static Future<ApiResponse<void>> removeClassStudent(String token, String classId, String registrationNo) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/classes/$classId/students/$registrationNo'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true);
+      }
+      final err = jsonDecode(response.body);
+      return ApiResponse(isSuccess: false, message: err['message'] ?? 'Failed to remove student');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error: $e');
+    }
+  }
+
+  // -------------------------------------------------------------
+  // ATTENDANCE MATRIX REPORT & CSV
+  // -------------------------------------------------------------
+  static Future<ApiResponse<Map<String, dynamic>>> getMatrixReport(String token, String classId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/classes/$classId/report/matrix'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true, data: jsonDecode(response.body));
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to generate matrix report');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error: $e');
+    }
+  }
+
+  static Future<ApiResponse<String>> downloadCsv(String token, String classId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/classes/$classId/report/csv'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse(isSuccess: true, data: response.body);
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to download CSV');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error: $e');
+    }
+  }
+
+  // -------------------------------------------------------------
+  // GPS SESSION & ATTENDANCE
+  // -------------------------------------------------------------
   static Future<ApiResponse<SessionModel>> startGpsSession({
     required String token,
     required String classId,
@@ -248,6 +468,23 @@ class ApiService {
     }
   }
 
+  static Future<ApiResponse<List<AttendanceRecordModel>>> getSessionRecords(String token, String sessionId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/sessions/$sessionId/records'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body);
+        List<AttendanceRecordModel> records = list.map((x) => AttendanceRecordModel.fromJson(x)).toList();
+        return ApiResponse(isSuccess: true, data: records);
+      }
+      return ApiResponse(isSuccess: false, message: 'Failed to load session records');
+    } catch (e) {
+      return ApiResponse(isSuccess: false, message: 'Error loading records: $e');
+    }
+  }
+
   static Future<ApiResponse<List<AttendanceRecordModel>>> getClassHistory(String token, String classId) async {
     try {
       final response = await http.get(
@@ -265,105 +502,20 @@ class ApiService {
     }
   }
 
-  static Future<ApiResponse<ClassModel>> createClass({
-    required String token,
-    required String department,
-    required String academicSession,
-    required String semester,
-    required String subjectCode,
-    String? subjectName,
-    double? credits,
-  }) async {
+  static Future<ApiResponse<void>> joinClass(String token, String code) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/classes'),
+        Uri.parse('$baseUrl/api/classes/join'),
         headers: _headers(token),
-        body: jsonEncode({
-          'department': department,
-          'academicSession': academicSession,
-          'semester': semester,
-          'subjectCode': subjectCode,
-          'subjectName': subjectName,
-          'credits': credits,
-        }),
+        body: jsonEncode({'code': code}),
       );
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final classObj = ClassModel.fromJson(jsonDecode(response.body));
-        return ApiResponse(isSuccess: true, data: classObj);
-      } else {
-        final error = jsonDecode(response.body);
-        return ApiResponse(isSuccess: false, message: error['message'] ?? 'Failed to create class');
-      }
-    } catch (e) {
-      return ApiResponse(isSuccess: false, message: 'Error creating class: $e');
-    }
-  }
-
-  static Future<ApiResponse<void>> resetStudentDevice(String token, String studentId) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/attendance/students/$studentId/reset-device'),
-        headers: _headers(token),
-      );
-      if (response.statusCode == 200) {
         return ApiResponse(isSuccess: true);
       }
-      return ApiResponse(isSuccess: false, message: 'Failed to reset student device');
+      final error = jsonDecode(response.body);
+      return ApiResponse(isSuccess: false, message: error['message'] ?? 'Failed to join class');
     } catch (e) {
-      return ApiResponse(isSuccess: false, message: 'Error resetting device: $e');
-    }
-  }
-
-  static Future<ApiResponse<List<AttendanceRecordModel>>> fetchStudentClassHistory(
-      String token, String classId, String studentId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/attendance/classes/$classId/students/$studentId'),
-        headers: _headers(token),
-      );
-      if (response.statusCode == 200) {
-        final List list = jsonDecode(response.body);
-        List<AttendanceRecordModel> records = list.map((x) => AttendanceRecordModel.fromJson(x)).toList();
-        return ApiResponse(isSuccess: true, data: records);
-      }
-      return ApiResponse(isSuccess: false, message: 'Failed to load student history');
-    } catch (e) {
-      return ApiResponse(isSuccess: false, message: 'Error loading student history: $e');
-    }
-  }
-
-  static Future<ApiResponse<void>> deleteStudentClassHistory(
-      String token, String classId, String studentId) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/api/attendance/classes/$classId/students/$studentId'),
-        headers: _headers(token),
-      );
-      if (response.statusCode == 200) {
-        return ApiResponse(isSuccess: true);
-      }
-      return ApiResponse(isSuccess: false, message: 'Failed to delete student history');
-    } catch (e) {
-      return ApiResponse(isSuccess: false, message: 'Error deleting student history: $e');
-    }
-  }
-
-  static Future<ApiResponse<void>> deleteBatchAttendanceRecords(
-      String token, List<String> recordIds) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/attendance/records/batch-delete'),
-        headers: _headers(token),
-        body: jsonEncode(recordIds),
-      );
-      if (response.statusCode == 200) {
-        return ApiResponse(isSuccess: true);
-      }
-      return ApiResponse(isSuccess: false, message: 'Failed to delete selected records');
-    } catch (e) {
-      return ApiResponse(isSuccess: false, message: 'Error deleting records: $e');
+      return ApiResponse(isSuccess: false, message: 'Error joining class: $e');
     }
   }
 }
-

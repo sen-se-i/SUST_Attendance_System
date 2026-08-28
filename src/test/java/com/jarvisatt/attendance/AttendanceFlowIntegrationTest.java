@@ -5,7 +5,6 @@ import com.jarvisatt.attendance.dto.AttendanceDtos.ClaimAttendanceRequest;
 import com.jarvisatt.attendance.dto.AttendanceDtos.VerifyScanRequest;
 import com.jarvisatt.attendance.dto.AuthDtos.*;
 import com.jarvisatt.attendance.dto.ClassDtos.CreateClassRequest;
-import com.jarvisatt.attendance.dto.ClassDtos.RosterRequest;
 import com.jarvisatt.attendance.dto.SessionDtos.StartSessionRequest;
 import com.jarvisatt.attendance.exception.ApiException;
 import com.jarvisatt.attendance.repository.AttendanceRecordRepository;
@@ -49,8 +48,7 @@ class AttendanceFlowIntegrationTest {
 
     @Autowired AuthService authService;
     @Autowired ClassService classService;
-    @Autowired RosterService rosterService;
-    @Autowired EnrollmentService enrollmentService;
+    @Autowired ClassStudentService classStudentService;
     @Autowired SessionLifecycleService sessionLifecycleService;
     @Autowired AttendanceService attendanceService;
     @Autowired SessionEngine sessionEngine;
@@ -195,14 +193,15 @@ class AttendanceFlowIntegrationTest {
         return fixture(suffix, 10.0);
     }
 
+    @Autowired AdminService adminService;
+
     private Fixture fixture(String suffix, double radiusMeters) {
-        var teacherAuth = authService.register(new RegisterRequest("teacher-" + suffix + "@example.com", "password", Role.ADMIN, null, null));
+        var teacherAuth = authService.register(new RegisterRequest("teacher-" + suffix + "@example.com", "password", Role.TEACHER, null, null));
         var studentAuth = authService.register(new RegisterRequest("student-" + suffix + "@example.com", "password", Role.STUDENT, "REG-" + suffix, null));
-        UserPrincipal teacher = new UserPrincipal(teacherAuth.userId(), "teacher-" + suffix + "@example.com", "", Role.ADMIN, null);
+        UserPrincipal teacher = new UserPrincipal(teacherAuth.userId(), "teacher-" + suffix + "@example.com", "", Role.TEACHER, null);
         UserPrincipal student = new UserPrincipal(studentAuth.userId(), "student-" + suffix + "@example.com", "", Role.STUDENT, "REG-" + suffix);
-        var createdClass = classService.create(new CreateClassRequest("CSE", "2023-24", "1st", "CSE101", "Computer Science", 3.0), teacher);
-        rosterService.addRoster(createdClass.id(), new RosterRequest(List.of("REG-" + suffix)), teacher);
-        enrollmentService.join(new JoinClassRequest(createdClass.code(), "REG-" + suffix), student);
+        var createdClass = adminService.createClass(new CreateClassRequest("CSE", "2023-24", "1st", "CSE101", "Computer Science", 3.0, teacherAuth.userId()));
+        classStudentService.addStudent(createdClass.id(), "REG-" + suffix, teacher);
         var session = sessionLifecycleService.start(new StartSessionRequest(createdClass.id(), 23.777176, 90.399452, 1.0, OffsetDateTime.now(), radiusMeters, 2, 5), teacher);
         return new Fixture(student, session);
     }

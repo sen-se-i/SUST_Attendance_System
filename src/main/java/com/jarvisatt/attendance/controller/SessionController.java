@@ -29,39 +29,39 @@ public class SessionController {
     private final QrCodeService qrCodeService;
 
     @PostMapping("/start")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     SessionResponse start(@Valid @RequestBody StartSessionRequest request, @AuthenticationPrincipal UserPrincipal principal) {
         return sessionLifecycleService.start(request, principal);
     }
 
     @PostMapping("/{sessionId}/stop")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     Map<String, String> stop(@PathVariable UUID sessionId, @AuthenticationPrincipal UserPrincipal principal) {
         sessionLifecycleService.stop(sessionId, principal);
         return Map.of("status", "ENDED");
     }
 
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'STUDENT')")
     SessionResponse active(@RequestParam UUID classId) {
         return sessionLifecycleService.activeSession(classId);
     }
 
     @GetMapping("/class/{classId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'STUDENT')")
     List<SessionHistoryResponse> listByClass(@PathVariable UUID classId, @AuthenticationPrincipal UserPrincipal principal) {
         return sessionLifecycleService.listByClass(classId, principal);
     }
 
     @DeleteMapping("/{sessionId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     Map<String, String> deleteSession(@PathVariable UUID sessionId, @AuthenticationPrincipal UserPrincipal principal) {
         sessionLifecycleService.deleteSession(sessionId, principal);
         return Map.of("status", "DELETED");
     }
 
     @GetMapping("/{sessionId}/current")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'STUDENT')")
     CurrentTickResponse current(@PathVariable UUID sessionId) {
         return sessionEngine.currentTick(sessionId)
                 .map(tick -> new CurrentTickResponse(sessionId, tick.tickIndex(), tick.qrPayload(), "ACTIVE", tick.expiresAt(), null, null, null, null))
@@ -69,7 +69,7 @@ public class SessionController {
     }
 
     @GetMapping(value = "/{sessionId}/qr.png", produces = MediaType.IMAGE_PNG_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     ResponseEntity<byte[]> qr(@PathVariable UUID sessionId) {
         String payload = sessionEngine.currentPayload(sessionId).orElse("waiting");
         return ResponseEntity.ok()

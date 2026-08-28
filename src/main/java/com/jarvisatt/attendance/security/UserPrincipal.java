@@ -22,7 +22,7 @@ public record UserPrincipal(UUID id, String email, String password, Role role, S
 
     @Override
     public String getUsername() {
-        return email;
+        return email != null ? email : (registrationNo != null ? registrationNo : id.toString());
     }
 
     @Override

@@ -36,74 +36,80 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 180,
-      height: 180,
+      width: 170,
+      height: 170,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          double pulseScale = widget.isScanning ? 1.0 + (_controller.value * 0.4) : 1.0;
+          double pulseScale = widget.isScanning ? 1.0 + (_controller.value * 0.35) : 1.0;
           double opacity = widget.isScanning ? (1.0 - _controller.value) : 0.4;
 
           return Stack(
             alignment: Alignment.center,
             children: [
-
+              // Outer Expanding Square Pulse
               Transform.scale(
                 scale: pulseScale,
                 child: Container(
-                  width: 150,
-                  height: 150,
+                  width: 140,
+                  height: 140,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF00E6FF).withOpacity(opacity * 0.3),
+                    color: Colors.white.withValues(alpha: opacity * 0.08),
                     border: Border.all(
-                      color: const Color(0xFF00E6FF).withOpacity(opacity),
-                      width: 2,
+                      color: Colors.white.withValues(alpha: opacity * 0.7),
+                      width: 1.5,
                     ),
                   ),
                 ),
               ),
 
+              // Inner Square Frame
               Container(
-                width: 110,
-                height: 110,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF00E6FF).withOpacity(0.4),
-                      const Color(0xFF00C8E0).withOpacity(0.1),
-                    ],
-                  ),
+                  color: const Color(0xFF141414),
                   border: Border.all(
-                    color: const Color(0xFF00E6FF),
-                    width: 2,
+                    color: const Color(0xFFFFFFFF),
+                    width: 1.5,
                   ),
                 ),
               ),
 
+              // Center Marker & Details (Pure Sharp Square Text Badge)
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.location_on_rounded,
-                    color: Color(0xFF00E6FF),
-                    size: 38,
-                  ),
-                  const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
+                      color: Colors.white,
+                      border: Border.all(color: Colors.white),
+                    ),
+                    child: const Text(
+                      'GPS',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      border: Border.all(color: Colors.white),
                     ),
                     child: Text(
-                      '${widget.radiusMeters.toInt()}m Radius',
+                      '${widget.radiusMeters.toInt()}M RAD',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
@@ -116,4 +122,3 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
     );
   }
 }
-

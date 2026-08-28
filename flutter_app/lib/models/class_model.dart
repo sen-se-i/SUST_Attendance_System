@@ -7,6 +7,8 @@ class ClassModel {
   final String subjectCode;
   final String? subjectName;
   final double? credits;
+  final String? status;
+  final String? teacherName;
 
   ClassModel({
     required this.id,
@@ -17,6 +19,8 @@ class ClassModel {
     required this.subjectCode,
     this.subjectName,
     this.credits,
+    this.status,
+    this.teacherName,
   });
 
   factory ClassModel.fromJson(Map<String, dynamic> json) {
@@ -29,7 +33,8 @@ class ClassModel {
       subjectCode: json['subjectCode'] ?? '',
       subjectName: json['subjectName'],
       credits: json['credits'] != null ? (json['credits'] as num).toDouble() : null,
+      status: json['status']?.toString(),
+      teacherName: json['teacherName']?.toString() ?? json['teacher']?['email']?.toString(),
     );
   }
 }
-
