@@ -24,7 +24,7 @@ class RadiusSliderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ensure selectedRadius matches one of the options
+
     final currentVal = radiusOptions.contains(selectedRadius)
         ? selectedRadius
         : 30.0;
@@ -42,7 +42,7 @@ class RadiusSliderWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'GEOFENCE RADIUS',
+                'LOCATION TRACK RADIUS',
                 style: TextStyle(
                   color: Color(0xFF888888),
                   fontSize: 11,

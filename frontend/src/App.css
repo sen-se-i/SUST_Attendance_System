@@ -52,7 +52,6 @@
   padding: 28px 24px 48px;
 }
 
-/* Auth Layout */
 .auth-container {
   max-width: 440px;
   margin: 40px auto 0;
@@ -78,7 +77,6 @@
   margin-bottom: 18px;
 }
 
-/* Workspace layout (Teacher Dashboard) */
 .workspace {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -98,7 +96,6 @@
   align-content: start;
 }
 
-/* Student Dashboard Grid */
 .student-grid {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr) 340px;
@@ -186,7 +183,6 @@ textarea.form-input {
   font-family: inherit;
 }
 
-/* Session / Geofence Stage */
 .qr-stage {
   display: grid;
   justify-items: center;
@@ -203,13 +199,11 @@ textarea.form-input {
   font-size: 0.9rem;
 }
 
-/* Scanner / Location block */
 .scanner-panel {
   display: grid;
   gap: 20px;
 }
 
-/* Toasts */
 .toast-stack {
   position: fixed;
   right: 24px;
@@ -256,5 +250,4 @@ textarea.form-input {
     padding: 12px 20px;
   }
 }
-
 

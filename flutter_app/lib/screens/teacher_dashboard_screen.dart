@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
@@ -24,7 +27,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   bool _isLoadingClasses = false;
   ClassModel? _selectedClass;
 
-  // Active Session State
   SessionModel? _activeSession;
   List<AttendanceRecordModel> _sessionRecords = [];
   Timer? _timer;
@@ -52,7 +54,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       setState(() {
         _isLoadingClasses = false;
         if (res.isSuccess && res.data != null) {
-          // Filter only ACTIVE classes assigned to teacher
+
           _classes = res.data!.where((c) => c.status == null || c.status!.toUpperCase() == 'ACTIVE').toList();
           if (_classes.isNotEmpty && _selectedClass == null) {
             _selectedClass = _classes.first;
@@ -178,9 +180,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  // -------------------------------------------------------------
-  // DIALOG: MANAGE CLASS STUDENTS (ADD / REMOVE)
-  // -------------------------------------------------------------
   void _openManageStudentsDialog() async {
     if (_selectedClass == null) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -194,9 +193,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  // -------------------------------------------------------------
-  // DIALOG: MATRIX ATTENDANCE REPORT & CSV EXPORT
-  // -------------------------------------------------------------
   void _openMatrixReportDialog() async {
     if (_selectedClass == null) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -225,7 +221,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.5),
         ),
         actions: [
-          // Text box button: RELOAD
+
           InkWell(
             onTap: () => _loadTeacherClasses(),
             child: Container(
@@ -239,7 +235,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               child: const Text('RELOAD', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
             ),
           ),
-          // Text box button: LOGOUT
+
           InkWell(
             onTap: () => auth.logout(),
             child: Container(
@@ -273,7 +269,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Class Selector Dropdown - Sharp Square
+
                       const Text('SELECT ASSIGNED CLASS', style: TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.8)),
                       const SizedBox(height: 6),
                       Container(
@@ -309,7 +305,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Quick Action Buttons: Manage Students & Matrix Report (Clean Text Buttons)
                       Row(
                         children: [
                           Expanded(
@@ -341,7 +336,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // GPS Session Control
                       if (_activeSession == null) ...[
                         RadiusSliderWidget(
                           selectedRadius: _selectedRadius,
@@ -369,7 +363,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           ),
                         ),
                       ] else ...[
-                        // Active Session Running Box
+
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
@@ -377,6 +371,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                             border: Border.all(color: Colors.white, width: 1.5),
                           ),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -398,20 +393,19 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
-                              LocationRadarWidget(
-                                isScanning: true,
-                                radiusMeters: _activeSession!.radiusMeters,
-                              ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 20),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
                                 children: [
-                                  _metricBox('GEOFENCE', '${_activeSession!.radiusMeters.toInt()}M'),
-                                  _metricBox('PRESENT', '${_sessionRecords.length} STUDENTS'),
+                                  Expanded(
+                                    child: _metricBox('LOCATION', '${_activeSession!.radiusMeters.toInt()} METERS'),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _metricBox('PRESENT STUDENTS', '${_sessionRecords.length}'),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 20),
                               SizedBox(
                                 width: double.infinity,
                                 height: 46,
@@ -431,7 +425,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
                       const SizedBox(height: 28),
 
-                      // Live Check-ins Feed
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -481,20 +474,25 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        rec.registrationNo,
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Distance: ${rec.distanceMeters.toStringAsFixed(1)}m from teacher',
-                                        style: const TextStyle(color: Color(0xFF888888), fontSize: 11),
-                                      ),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          rec.registrationNo,
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Distance: ${rec.distanceMeters.toStringAsFixed(1)}m from teacher',
+                                          style: const TextStyle(color: Color(0xFF888888), fontSize: 11),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(color: const Color(0xFF1A1A1A), border: Border.all(color: Colors.white)),
@@ -529,9 +527,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   }
 }
 
-// -------------------------------------------------------------
-// CLASS STUDENTS MANAGEMENT DIALOG (ADD / REMOVE STUDENTS)
-// -------------------------------------------------------------
 class _ClassStudentsDialog extends StatefulWidget {
   final ClassModel classItem;
   final String token;
@@ -652,7 +647,7 @@ class _ClassStudentsDialogState extends State<_ClassStudentsDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Add Student Row
+
             Row(
               children: [
                 Expanded(
@@ -678,7 +673,6 @@ class _ClassStudentsDialogState extends State<_ClassStudentsDialog> {
             ),
             const SizedBox(height: 16),
 
-            // Students List
             SizedBox(
               height: 300,
               child: _isLoading
@@ -738,9 +732,6 @@ class _ClassStudentsDialogState extends State<_ClassStudentsDialog> {
   }
 }
 
-// -------------------------------------------------------------
-// MATRIX ATTENDANCE REPORT & CSV EXPORT DIALOG
-// -------------------------------------------------------------
 class _MatrixReportDialog extends StatefulWidget {
   final ClassModel classItem;
   final String token;
@@ -774,19 +765,205 @@ class _MatrixReportDialogState extends State<_MatrixReportDialog> {
     }
   }
 
-  Future<void> _copyCsv() async {
-    final res = await ApiService.downloadCsv(widget.token, widget.classItem.id);
-    if (res.isSuccess && res.data != null) {
-      await Clipboard.setData(ClipboardData(text: res.data!));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('CSV Report copied to clipboard!'),
-          backgroundColor: Color(0xFF222222),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        ),
-      );
+  Future<void> _exportPdf() async {
+    if (_report == null) return;
+    final report = _report!;
+
+    final pdf = pw.Document();
+    final sessions = (report['sessions'] as List?) ?? [];
+    final studentRows = (report['studentRows'] ?? report['rows'] ?? []) as List;
+    final counts = (report['sessionAttendanceCounts'] ?? report['sessionTotals'] ?? []) as List;
+
+    String computeMark(double pct) {
+      if (pct >= 95) return '10';
+      if (pct >= 90) return '9';
+      if (pct >= 85) return '8';
+      if (pct >= 80) return '7';
+      if (pct >= 75) return '6';
+      if (pct >= 70) return '5';
+      if (pct >= 65) return '4';
+      if (pct >= 60) return '3';
+      if (pct >= 50) return '0 (Eligible)';
+      return 'INELIGIBLE';
     }
+
+    final sessionHeaders = sessions.asMap().entries.map((entry) {
+      final idx = entry.key;
+      final s = entry.value;
+      final raw = (s['startedAt'] ?? s['date'] ?? '').toString();
+      try {
+        return DateFormat('MM/dd').format(DateTime.parse(raw).toLocal());
+      } catch (_) {
+        return 'S${idx + 1}';
+      }
+    }).toList();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(24),
+        build: (ctx) => [
+
+          pw.Text(
+            'ATTENDANCE REPORT — ${report['classCode'] ?? ''} ${report['subjectName'] ?? report['subjectCode'] ?? ''}',
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'Department: ${report['department'] ?? ''}   Session: ${report['academicSession'] ?? ''}   Semester: ${report['semester'] ?? ''}   Teacher: ${report['teacherName'] ?? ''}',
+            style: const pw.TextStyle(fontSize: 9),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'Total Sessions: ${report['totalSessions'] ?? 0}   Total Students: ${report['totalStudents'] ?? 0}   Average Attendance: ${report['averageAttendancePercentage'] ?? 0}%',
+            style: const pw.TextStyle(fontSize: 9),
+          ),
+          pw.SizedBox(height: 12),
+
+          pw.Table(
+            border: pw.TableBorder.all(width: 0.5),
+            columnWidths: {
+              0: const pw.FixedColumnWidth(90),
+              ...{for (var i = 0; i < sessions.length; i++) i + 1: const pw.FixedColumnWidth(28)},
+              sessions.length + 1: const pw.FixedColumnWidth(42),
+              sessions.length + 2: const pw.FixedColumnWidth(55),
+            },
+            children: [
+
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                children: [
+                  _pdfCell('REGISTRATION NO', bold: true, fontSize: 7),
+                  ...sessionHeaders.map((h) => _pdfCell(h, bold: true, fontSize: 7)),
+                  _pdfCell('TOTAL/%', bold: true, fontSize: 7),
+                  _pdfCell('MARKS', bold: true, fontSize: 7),
+                ],
+              ),
+
+              ...studentRows.map((r) {
+                final reg = r['registrationNo']?.toString() ?? '';
+                final dynamic attData = r['attendance'] ?? r['attendanceMatrix'];
+                final total = r['totalAttended'] ?? r['totalPresent'] ?? 0;
+                final pct = (r['percentage'] as num?)?.toDouble() ?? 0.0;
+                final mark = (r['attendanceMark']?.toString().isNotEmpty ?? false)
+                    ? r['attendanceMark'].toString()
+                    : computeMark(pct);
+                final isIneligible = mark.toUpperCase().contains('INELIGIBLE');
+
+                return pw.TableRow(
+                  decoration: isIneligible ? const pw.BoxDecoration(color: PdfColors.red50) : null,
+                  children: [
+                    _pdfCell(reg, fontSize: 7),
+                    ...sessions.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final s = entry.value;
+                      final sId = s['sessionId']?.toString() ?? s['id']?.toString() ?? '';
+                      bool present = false;
+                      if (attData is List && i < attData.length) {
+                        present = attData[i] == true;
+                      } else if (attData is Map) {
+                        present = attData[sId] == true;
+                      }
+
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.all(2),
+                        child: pw.Center(
+                          child: pw.Text(
+                            present ? 'P' : 'A',
+                            style: pw.TextStyle(
+                              fontSize: 7,
+                              color: present ? PdfColors.green700 : PdfColors.red700,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    _pdfCell('$total (${pct.toStringAsFixed(0)}%)', fontSize: 7),
+                    _pdfCell(mark, bold: true, fontSize: 7,
+                        color: isIneligible ? PdfColors.red700 : (pct >= 75 ? PdfColors.green700 : PdfColors.orange700)),
+                  ],
+                );
+              }),
+
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                children: [
+                  _pdfCell('TOTAL PRESENT', bold: true, fontSize: 7),
+                  ...List.generate(sessions.length, (i) {
+                    int count = 0;
+                    if (i < counts.length) {
+                      final item = counts[i];
+                      if (item is num) {
+                        count = item.toInt();
+                      } else if (item is Map) {
+                        count = (item['presentCount'] ?? item['attendanceCount'] ?? 0) as int;
+                      }
+                    }
+                    return _pdfCell('$count', bold: true, fontSize: 7);
+                  }),
+                  _pdfCell('-', fontSize: 7),
+                  _pdfCell('-', fontSize: 7),
+                ],
+              ),
+            ],
+          ),
+
+          pw.SizedBox(height: 16),
+
+          pw.Text('ATTENDANCE MARKS GRADING POLICY:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 4),
+          pw.Table(
+            border: pw.TableBorder.all(width: 0.5),
+            columnWidths: const {
+              0: pw.FixedColumnWidth(100),
+              1: pw.FixedColumnWidth(80),
+              2: pw.FixedColumnWidth(160),
+            },
+            children: [
+              pw.TableRow(decoration: const pw.BoxDecoration(color: PdfColors.grey300), children: [
+                _pdfCell('Attendance %', bold: true, fontSize: 8),
+                _pdfCell('Marks', bold: true, fontSize: 8),
+                _pdfCell('Exam Status', bold: true, fontSize: 8),
+              ]),
+              for (final row in [
+                ['95 – 100 %', '10', 'Eligible'],
+                ['90 – 94 %', '9', 'Eligible'],
+                ['85 – 89 %', '8', 'Eligible'],
+                ['80 – 84 %', '7', 'Eligible'],
+                ['75 – 79 %', '6', 'Eligible'],
+                ['70 – 74 %', '5', 'Eligible'],
+                ['65 – 69 %', '4', 'Eligible'],
+                ['60 – 64 %', '3', 'Eligible'],
+                ['50 – 59 %', '0', 'Eligible (0 marks)'],
+                ['0 – 49 %', 'INELIGIBLE', 'Cannot sit for exam'],
+              ])
+                pw.TableRow(children: [
+                  _pdfCell(row[0], fontSize: 8),
+                  _pdfCell(row[1], fontSize: 8, bold: row[1] == 'INELIGIBLE'),
+                  _pdfCell(row[2], fontSize: 8),
+                ]),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (fmt) async => pdf.save());
+  }
+
+  static pw.Widget _pdfCell(String text, {bool bold = false, double fontSize = 8, PdfColor? color}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: fontSize,
+          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+          color: color,
+        ),
+      ),
+    );
   }
 
   @override
@@ -794,19 +971,9 @@ class _MatrixReportDialogState extends State<_MatrixReportDialog> {
     return AlertDialog(
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero, side: BorderSide(color: Color(0xFF333333))),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('MATRIX ATTENDANCE REPORT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
-          InkWell(
-            onTap: _copyCsv,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFF1A1A1A), border: Border.all(color: Colors.white)),
-              child: const Text('COPY CSV', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
-            ),
-          ),
-        ],
+      title: const Text(
+        'MATRIX ATTENDANCE REPORT',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.8),
       ),
       content: SizedBox(
         width: double.maxFinite,
@@ -818,18 +985,18 @@ class _MatrixReportDialogState extends State<_MatrixReportDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Summary Badges
+
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _summaryCard('SESSIONS', '${_report!['totalSessions'] ?? 0}'),
-                            _summaryCard('STUDENTS', '${_report!['totalStudents'] ?? 0}'),
-                            _summaryCard('AVG ATT %', '${_report!['averageAttendancePercentage'] ?? 0}%'),
+                            Expanded(child: _summaryCard('SESSIONS', '${_report!['totalSessions'] ?? 0}')),
+                            const SizedBox(width: 6),
+                            Expanded(child: _summaryCard('STUDENTS', '${_report!['totalStudents'] ?? 0}')),
+                            const SizedBox(width: 6),
+                            Expanded(child: _summaryCard('AVG ATT %', '${_report!['averageAttendancePercentage'] ?? 0}%')),
                           ],
                         ),
                         const SizedBox(height: 16),
 
-                        // Matrix Table View
                         const Text('ATTENDANCE MATRIX (P: Present, A: Absent)', style: TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.w900)),
                         const SizedBox(height: 8),
 
@@ -843,9 +1010,9 @@ class _MatrixReportDialogState extends State<_MatrixReportDialog> {
       ),
       actions: [
         ElevatedButton(
-          onPressed: _copyCsv,
+          onPressed: _exportPdf,
           style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
-          child: const Text('COPY / EXPORT CSV', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          child: const Text('EXPORT PDF', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context),
@@ -855,24 +1022,48 @@ class _MatrixReportDialogState extends State<_MatrixReportDialog> {
     );
   }
 
+  (String, Color) _computeMarkColor(double pct) {
+    if (pct >= 95) return ('10', Colors.greenAccent);
+    if (pct >= 90) return ('9', Colors.greenAccent);
+    if (pct >= 85) return ('8', Colors.greenAccent);
+    if (pct >= 80) return ('7', const Color(0xFF80FF80));
+    if (pct >= 75) return ('6', const Color(0xFFB0FF70));
+    if (pct >= 70) return ('5', Colors.yellowAccent);
+    if (pct >= 65) return ('4', Colors.orangeAccent);
+    if (pct >= 60) return ('3', Colors.orange);
+    if (pct >= 50) return ('0 (Eligible)', Colors.orange);
+    return ('INELIGIBLE', Colors.redAccent);
+  }
+
   Widget _summaryCard(String label, String val) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(color: const Color(0xFF161616), border: Border.all(color: const Color(0xFF333333))),
       child: Column(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF888888), fontSize: 10, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(color: Color(0xFF888888), fontSize: 9, fontWeight: FontWeight.bold)),
           const SizedBox(height: 2),
-          Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+          Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
         ],
       ),
     );
   }
 
   Widget _buildMatrixTable(Map<String, dynamic> data) {
-    final List sessions = data['sessions'] ?? [];
-    final List studentRows = data['rows'] ?? [];
-    final List totals = data['sessionTotals'] ?? [];
+    final List sessions = (data['sessions'] as List?) ?? [];
+    final List studentRows = (data['studentRows'] ?? data['rows'] ?? []) as List;
+    final List counts = (data['sessionAttendanceCounts'] ?? data['sessionTotals'] ?? []) as List;
+
+    if (sessions.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+        alignment: Alignment.center,
+        child: const Text(
+          'No attendance sessions conducted yet for this class.',
+          style: TextStyle(color: Color(0xFF888888), fontSize: 12),
+        ),
+      );
+    }
 
     return DataTable(
       headingRowColor: WidgetStateProperty.all(const Color(0xFF1E1E1E)),
@@ -880,27 +1071,49 @@ class _MatrixReportDialogState extends State<_MatrixReportDialog> {
       border: TableBorder.all(color: const Color(0xFF2A2A2A)),
       columns: [
         const DataColumn(label: Text('REGISTRATION NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
-        ...sessions.map((s) => DataColumn(
-              label: Text(
-                DateFormat('MM-dd HH:mm').format(DateTime.parse(s['date'] ?? DateTime.now().toIso8601String()).toLocal()),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
-              ),
-            )),
+        ...sessions.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final s = entry.value;
+          final raw = (s['startedAt'] ?? s['date'] ?? '').toString();
+          String formatted;
+          try {
+            formatted = DateFormat('MM-dd HH:mm').format(DateTime.parse(raw).toLocal());
+          } catch (_) {
+            formatted = 'S${idx + 1}';
+          }
+          return DataColumn(
+            label: Text(
+              formatted,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+            ),
+          );
+        }),
         const DataColumn(label: Text('TOTAL / %', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
+        const DataColumn(label: Text('MARKS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
       ],
       rows: [
         ...studentRows.map((r) {
           final reg = r['registrationNo']?.toString() ?? '';
-          final Map matrix = r['attendanceMatrix'] ?? {};
-          final totalPresent = r['totalPresent'] ?? 0;
-          final pct = r['percentage'] ?? 0.0;
+          final dynamic attData = r['attendance'] ?? r['attendanceMatrix'];
+          final totalPresent = r['totalAttended'] ?? r['totalPresent'] ?? 0;
+          final pct = (r['percentage'] as num?)?.toDouble() ?? 0.0;
 
-          return DataRow(cells: [
+          List<DataCell> cells = [
             DataCell(Text(reg, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12))),
-            ...sessions.map((s) {
-              final sId = s['sessionId']?.toString() ?? '';
-              final isPresent = matrix[sId] == true;
-              return DataCell(
+          ];
+
+          for (var i = 0; i < sessions.length; i++) {
+            final s = sessions[i];
+            final sId = s['sessionId']?.toString() ?? s['id']?.toString() ?? '';
+            bool isPresent = false;
+            if (attData is List && i < attData.length) {
+              isPresent = attData[i] == true;
+            } else if (attData is Map) {
+              isPresent = attData[sId] == true;
+            }
+
+            cells.add(
+              DataCell(
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
@@ -912,17 +1125,42 @@ class _MatrixReportDialogState extends State<_MatrixReportDialog> {
                     style: TextStyle(color: isPresent ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 11),
                   ),
                 ),
-              );
-            }),
-            DataCell(Text('$totalPresent (${pct.toStringAsFixed(0)}%)', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
-          ]);
+              ),
+            );
+          }
+
+          cells.add(DataCell(Text('$totalPresent (${pct.toStringAsFixed(0)}%)', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))));
+
+          final markStr = (r['attendanceMark']?.toString().isNotEmpty ?? false)
+              ? r['attendanceMark'].toString()
+              : _computeMarkColor(pct).$1;
+          final markColor = _computeMarkColor(pct).$2;
+
+          cells.add(DataCell(
+            Text(markStr,
+              style: TextStyle(color: markColor, fontWeight: FontWeight.bold, fontSize: 11)),
+          ));
+
+          return DataRow(cells: cells);
         }),
-        // Bottom Footer Row with Totals
+
         DataRow(
           color: WidgetStateProperty.all(const Color(0xFF1E1E1E)),
           cells: [
             const DataCell(Text('TOTAL PRESENT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11))),
-            ...totals.map((t) => DataCell(Text('${t['presentCount'] ?? 0}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11)))),
+            ...List.generate(sessions.length, (idx) {
+              int count = 0;
+              if (idx < counts.length) {
+                final item = counts[idx];
+                if (item is num) {
+                  count = item.toInt();
+                } else if (item is Map) {
+                  count = (item['presentCount'] ?? item['attendanceCount'] ?? 0) as int;
+                }
+              }
+              return DataCell(Text('$count', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11)));
+            }),
+            const DataCell(Text('-', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
             const DataCell(Text('-', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
           ],
         ),
@@ -930,3 +1168,4 @@ class _MatrixReportDialogState extends State<_MatrixReportDialog> {
     );
   }
 }
+

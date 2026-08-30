@@ -156,25 +156,22 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const notify = useToast();
 
-  const [activeTab, setActiveTab] = useState("classes"); // 'classes', 'create_student', 'create_teacher', 'create_class', 'passwords'
+  const [activeTab, setActiveTab] = useState("classes");
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [busy, setBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // Create Student Form
   const [studentRegNo, setStudentRegNo] = useState("");
   const [studentPassword, setStudentPassword] = useState("");
   const [createdStudentResult, setCreatedStudentResult] = useState(null);
 
-  // Create Teacher Form
   const [teacherEmail, setTeacherEmail] = useState("");
   const [teacherPassword, setTeacherPassword] = useState("");
   const [teacherDept, setTeacherDept] = useState(DEPARTMENTS[0]);
   const [createdTeacherResult, setCreatedTeacherResult] = useState(null);
 
-  // Create Class Form
   const [classForm, setClassForm] = useState({
     department: DEPARTMENTS[0],
     academicSession: "2023-24",
@@ -187,14 +184,11 @@ export default function AdminDashboard() {
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [deptTeachers, setDeptTeachers] = useState([]);
 
-  // Password Reset Form
   const [resetIdentifier, setResetIdentifier] = useState("");
   const [resetNewPassword, setResetNewPassword] = useState("");
 
-  // End Class Confirmation Modal
   const [endClassModal, setEndClassModal] = useState({ open: false, cls: null });
 
-  // Matrix Report Modal
   const [matrixModal, setMatrixModal] = useState({ open: false, data: null, loading: false });
 
   const loadClasses = useCallback(async () => {
@@ -220,7 +214,6 @@ export default function AdminDashboard() {
     loadTeachers();
   }, [loadClasses, loadTeachers]);
 
-  // Subject Catalog Auto-update
   useEffect(() => {
     const deptSubjects = SUBJECT_CATALOG[classForm.department] || {};
     const semSubjects = deptSubjects[classForm.semester] || [];
@@ -237,7 +230,6 @@ export default function AdminDashboard() {
     }
   }, [classForm.department, classForm.semester]);
 
-  // Load teachers for the selected department
   useEffect(() => {
     if (classForm.department) {
       api(`/api/admin/teachers?department=${encodeURIComponent(classForm.department)}`)
@@ -253,7 +245,6 @@ export default function AdminDashboard() {
     }
   }, [classForm.department]);
 
-  // Handle Student Creation
   async function handleCreateStudent(e) {
     e.preventDefault();
     if (!studentRegNo.trim() || !studentPassword.trim()) return;
@@ -280,7 +271,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Handle Teacher Creation
   async function handleCreateTeacher(e) {
     e.preventDefault();
     if (!teacherEmail.trim() || !teacherPassword.trim()) return;
@@ -308,7 +298,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Handle Class Creation
   async function handleCreateClass(e) {
     e.preventDefault();
     setBusy(true);
@@ -327,7 +316,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Handle End Class
   async function handleEndClass() {
     if (!endClassModal.cls) return;
     setBusy(true);
@@ -343,7 +331,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Handle Admin Password Reset
   async function handleResetPassword(e) {
     e.preventDefault();
     if (!resetIdentifier.trim() || !resetNewPassword.trim()) return;
@@ -367,7 +354,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Open Matrix Report Modal
   async function openMatrixReport(classId) {
     setMatrixModal({ open: true, data: null, loading: true });
     try {
@@ -397,7 +383,7 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ paddingBottom: 80 }}>
-      {/* Top Header & Metrics */}
+      {}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -415,7 +401,7 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {/* Navigation Tabs */}
+      {}
       <div style={{ display: "flex", gap: 8, overflowX: "auto", borderBottom: "1px solid #213042", paddingBottom: 12, marginBottom: 24 }}>
         <button
           type="button"
@@ -459,7 +445,7 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {/* TAB 1: ALL CLASSES VIEW */}
+      {}
       {activeTab === "classes" && (
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
@@ -581,7 +567,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* TAB 2: CREATE STUDENT */}
+      {}
       {activeTab === "create_student" && (
         <div style={{ maxWidth: 540, margin: "0 auto" }}>
           <div className="panel glass-panel" style={{ border: "1px solid #00E6FF", padding: 24 }}>
@@ -611,7 +597,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Live Detection Preview */}
+              {}
               {studentRegNo.length >= 4 && (
                 <div style={{ background: "rgba(0, 230, 255, 0.08)", border: "1px solid #213042", borderRadius: 10, padding: 14, marginBottom: 16 }}>
                   <span style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block", fontWeight: 700, marginBottom: 6 }}>
@@ -658,7 +644,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* TAB 3: CREATE TEACHER */}
+      {}
       {activeTab === "create_teacher" && (
         <div style={{ maxWidth: 540, margin: "0 auto" }}>
           <div className="panel glass-panel" style={{ border: "1px solid #00E6FF", padding: 24 }}>
@@ -722,7 +708,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* TAB 4: CREATE CLASS WITH AUTO-ENROLLMENT */}
+      {}
       {activeTab === "create_class" && (
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <div className="panel glass-panel" style={{ border: "1px solid #00E6FF", padding: 24 }}>
@@ -803,7 +789,7 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* Auto-enrollment Alert Banner */}
+              {}
               <div style={{ background: "rgba(0, 255, 136, 0.1)", border: "1px solid rgba(0, 255, 136, 0.4)", borderRadius: 10, padding: 12, marginBottom: 20 }}>
                 <div style={{ color: "#00FF88", fontWeight: 700, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 6 }}>
                   <CheckCircle2 size={16} /> Auto-Enrollment Active
@@ -821,7 +807,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* TAB 5: PASSWORD MANAGEMENT */}
+      {}
       {activeTab === "passwords" && (
         <div style={{ maxWidth: 540, margin: "0 auto" }}>
           <div className="panel glass-panel" style={{ border: "1px solid #00E6FF", padding: 24 }}>
@@ -866,7 +852,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* END CLASS CONFIRMATION MODAL */}
+      {}
       {endClassModal.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="panel glass-panel" style={{ width: "min(90vw, 440px)", border: "2px solid #ef4444", padding: 24, textAlign: "center" }}>
@@ -894,7 +880,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* MATRIX ATTENDANCE REPORT MODAL */}
+      {}
       {matrixModal.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="panel glass-panel" style={{ width: "min(98vw, 1100px)", maxHeight: "92vh", overflowY: "auto", border: "1px solid #00E6FF", padding: 24 }}>
@@ -945,7 +931,7 @@ export default function AdminDashboard() {
               <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Generating attendance matrix...</div>
             ) : (
               <div>
-                {/* Summary Header Metrics */}
+                {}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
                   <div style={{ background: "#090F17", border: "1px solid #213042", padding: "10px 14px", borderRadius: 8 }}>
                     <span style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block" }}>TOTAL SESSIONS</span>
@@ -965,7 +951,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Matrix Table */}
+                {}
                 <div style={{ overflowX: "auto", border: "1px solid #213042", borderRadius: 10 }}>
                   <table className="table" style={{ width: "100%", fontSize: "0.82rem", textAlign: "center", borderCollapse: "collapse" }}>
                     <thead>
@@ -1003,7 +989,7 @@ export default function AdminDashboard() {
                           </td>
                         </tr>
                       ))}
-                      {/* Summary Row */}
+                      {}
                       <tr style={{ background: "#0D1520", borderTop: "2px solid #213042", fontWeight: 800 }}>
                         <td style={{ padding: "10px 12px", textAlign: "left", color: "#00E6FF", position: "sticky", left: 0, background: "#0D1520" }}>
                           Total Present

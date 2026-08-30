@@ -70,9 +70,6 @@ class ApiService {
     return '$fallback (${response.statusCode})';
   }
 
-  // -------------------------------------------------------------
-  // AUTH
-  // -------------------------------------------------------------
   static Future<ApiResponse<UserModel>> login(String emailOrRegNo, String password, {String? deviceInstallId}) async {
     try {
       final response = await http.post(
@@ -102,9 +99,6 @@ class ApiService {
     }
   }
 
-  // -------------------------------------------------------------
-  // ADMIN SERVICE
-  // -------------------------------------------------------------
   static Future<ApiResponse<Map<String, dynamic>>> createStudentAdmin({
     required String token,
     required String registrationNo,
@@ -263,9 +257,6 @@ class ApiService {
     }
   }
 
-  // -------------------------------------------------------------
-  // TEACHER & STUDENT CLASSES
-  // -------------------------------------------------------------
   static Future<ApiResponse<List<ClassModel>>> getClasses(String token, bool isTeacher) async {
     try {
       final endpoint = isTeacher ? '/api/classes' : '/api/classes/enrolled';
@@ -286,9 +277,6 @@ class ApiService {
     }
   }
 
-  // -------------------------------------------------------------
-  // CLASS STUDENT MANAGEMENT (Add/Remove from Class)
-  // -------------------------------------------------------------
   static Future<ApiResponse<List<Map<String, dynamic>>>> getClassStudents(String token, String classId) async {
     try {
       final response = await http.get(
@@ -338,9 +326,6 @@ class ApiService {
     }
   }
 
-  // -------------------------------------------------------------
-  // ATTENDANCE MATRIX REPORT & CSV
-  // -------------------------------------------------------------
   static Future<ApiResponse<Map<String, dynamic>>> getMatrixReport(String token, String classId) async {
     try {
       final response = await http.get(
@@ -371,9 +356,6 @@ class ApiService {
     }
   }
 
-  // -------------------------------------------------------------
-  // GPS SESSION & ATTENDANCE
-  // -------------------------------------------------------------
   static Future<ApiResponse<SessionModel>> startGpsSession({
     required String token,
     required String classId,

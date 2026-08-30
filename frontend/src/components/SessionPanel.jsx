@@ -48,7 +48,7 @@ export function SessionPanel({ session, onStart, onStop, busy }) {
       {!session ? (
         <div style={{ marginTop: "16px" }}>
           <label className="form-label">
-            Geofence Radius: <strong>{radius} Meters</strong>
+            Location Track Radius: <strong>{radius} Meters</strong>
           </label>
           <div style={{ display: "flex", gap: "10px", margin: "12px 0" }}>
             {[20, 50, 100].map((r) => (
@@ -76,18 +76,17 @@ export function SessionPanel({ session, onStart, onStop, busy }) {
       ) : (
         <div className="qr-stage" style={{ textAlign: "center", padding: "20px" }}>
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", fontWeight: "700", fontSize: "1.05rem" }}>
-            <MapPin size={20} /> GEOFENCE ACTIVE ({session.radiusMeters || radius}m Radius)
+            <MapPin size={20} /> LOCATION TRACK ACTIVE ({session.radiusMeters || radius}m Radius)
           </div>
           <div style={{ margin: "12px 0", fontSize: "1.2rem", fontWeight: "700", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", color: "var(--danger)" }}>
             <Timer size={20} /> {remaining}s remaining (150s limit)
           </div>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>
-            Students inside the {session.radiusMeters || radius}m perimeter can now click "Give Attendance" on their device.
+            Students within {session.radiusMeters || radius} meters can now click "Give Attendance" on their device.
           </p>
         </div>
       )}
     </div>
   );
 }
-
 

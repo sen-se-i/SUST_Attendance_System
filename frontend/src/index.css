@@ -1,37 +1,36 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Sleek Minimalist Monochrome Palette */
+
   --bg-base: #f8fafc;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #f1f5f9;
-  
+
   --primary: #0f172a;
   --primary-hover: #1e293b;
   --primary-glow: rgba(15, 23, 42, 0.08);
-  
+
   --secondary: #475569;
   --secondary-hover: #334155;
   --secondary-glow: rgba(71, 85, 105, 0.08);
-  
+
   --success: #16a34a;
   --warning: #ca8a04;
   --danger: #dc2626;
-  
+
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
-  
+
   --border-light: #e2e8f0;
   --border-focus: #0f172a;
   --border-subtle: #cbd5e1;
-  
-  /* Layout & Rounding */
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
-  
+
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -58,7 +57,6 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary);
 }
 
-/* Modern Card Panels */
 .glass-panel {
   background: var(--bg-surface);
   border: 1px solid var(--border-light);
@@ -268,5 +266,4 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
-
 

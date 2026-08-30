@@ -26,21 +26,21 @@ function AppRoutes() {
       <Routes>
         <Route path="/login" element={<AuthPage />} />
 
-        {/* ADMIN ROUTES */}
+        {}
         <Route element={<ProtectedRoute role="ADMIN" />}>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/class/:classId" element={<TeacherClassDetailPage />} />
           <Route path="/admin/class/:classId/session/:sessionId" element={<TeacherSessionDetailPage />} />
         </Route>
 
-        {/* TEACHER ROUTES */}
+        {}
         <Route element={<ProtectedRoute role="TEACHER" />}>
           <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/teacher/class/:classId" element={<TeacherClassDetailPage />} />
           <Route path="/teacher/class/:classId/session/:sessionId" element={<TeacherSessionDetailPage />} />
         </Route>
 
-        {/* STUDENT ROUTES */}
+        {}
         <Route element={<ProtectedRoute role="STUDENT" />}>
           <Route path="/student" element={<StudentDashboard />} />
           <Route path="/student/class/:classId" element={<StudentClassDetailPage />} />

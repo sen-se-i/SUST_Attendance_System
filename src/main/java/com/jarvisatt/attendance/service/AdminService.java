@@ -67,7 +67,7 @@ public class AdminService {
         User student = new User();
         student.setRole(Role.STUDENT);
         student.setRegistrationNo(regNo);
-        student.setEmail(null); // Students do not require email
+        student.setEmail(null);
         student.setDepartment(dept);
         student.setAcademicSession(session);
         student.setPasswordHash(passwordEncoder.encode(request.password().trim()));
@@ -75,7 +75,6 @@ public class AdminService {
         userRepository.save(student);
         log.info("Admin created student: reg={}, dept={}, session={}", regNo, dept, session);
 
-        // Auto-enroll new student into any active classes of this dept & session
         List<ClassEntity> activeClasses = classRepository.findByStatus("ACTIVE");
         for (ClassEntity cls : activeClasses) {
             if (dept.equalsIgnoreCase(cls.getDepartment()) && session.equalsIgnoreCase(cls.getAcademicSession())) {
@@ -168,7 +167,6 @@ public class AdminService {
         entity.setStatus("ACTIVE");
         classRepository.save(entity);
 
-        // Auto-Enroll all matching students in this department and session
         List<User> allStudents = userRepository.findByRole(Role.STUDENT);
         int enrolledCount = 0;
         for (User st : allStudents) {

@@ -49,7 +49,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       setState(() {
         _isLoadingClasses = false;
         if (res.isSuccess && res.data != null) {
-          // Only show active classes
+
           _classes = res.data!.where((c) => c.status == null || c.status!.toUpperCase() == 'ACTIVE').toList();
           if (_classes.isNotEmpty && _selectedClass == null) {
             _selectedClass = _classes.first;
@@ -183,7 +183,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.5),
         ),
         actions: [
-          // Text box button: RELOAD
+
           InkWell(
             onTap: () {
               _loadEnrolledClasses();
@@ -200,7 +200,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               child: const Text('RELOAD', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
             ),
           ),
-          // Text box button: LOGOUT
+
           InkWell(
             onTap: () => auth.logout(),
             child: Container(
@@ -231,7 +231,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Student Info Card - Sharp Square Text Card
+
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -275,7 +275,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Class Selector
                     const Text('AUTO-ENROLLED COURSES', style: TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
                     const SizedBox(height: 8),
                     if (_classes.isEmpty)
@@ -332,7 +331,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       ),
                     const SizedBox(height: 24),
 
-                    // Active Attendance Session Card - Monochrome Sharp Square
                     if (_activeSession != null)
                       Container(
                         padding: const EdgeInsets.all(20),
@@ -341,6 +339,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           border: Border.all(color: const Color(0xFFFFFFFF), width: 1.5),
                         ),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -371,12 +370,26 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
-                            LocationRadarWidget(
-                              isScanning: true,
-                              radiusMeters: _activeSession!.radiusMeters,
+                            const SizedBox(height: 16),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF141414),
+                                border: Border.all(color: const Color(0xFF333333)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Flexible(
+                                    child: Text('REQUIRED LOCATION TRACK:', style: TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.bold)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('${_activeSession!.radiusMeters.toInt()} METERS', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
                             if (_hasAttendedCurrentSession)
                               Container(
@@ -416,7 +429,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                           child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
                                         )
                                       : const Text(
-                                          'GIVE ATTENDANCE (GPS)',
+                                          'GIVE ATTENDANCE (LOCATION TRACK)',
                                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.0),
                                         ),
                                 ),
@@ -450,7 +463,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
                     const SizedBox(height: 28),
 
-                    // Attendance History Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

@@ -47,7 +47,7 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
           return Stack(
             alignment: Alignment.center,
             children: [
-              // Outer Expanding Square Pulse
+
               Transform.scale(
                 scale: pulseScale,
                 child: Container(
@@ -63,7 +63,6 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
                 ),
               ),
 
-              // Inner Square Frame
               Container(
                 width: 100,
                 height: 100,
@@ -76,7 +75,6 @@ class _LocationRadarWidgetState extends State<LocationRadarWidget>
                 ),
               ),
 
-              // Center Marker & Details (Pure Sharp Square Text Badge)
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

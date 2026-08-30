@@ -76,7 +76,7 @@ export default function AuthPage() {
           />
         </div>
 
-        {/* Demo Fast Login Buttons */}
+        {}
         <div style={{ marginBottom: 20 }}>
           <span style={{ color: "#94a3b8", fontSize: "0.75rem", fontWeight: 700, display: "block", marginBottom: 8 }}>
             QUICK DEMO ACCOUNTS:

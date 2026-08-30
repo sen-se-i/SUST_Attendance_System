@@ -5,9 +5,6 @@ import '../services/api_service.dart';
 import '../models/class_model.dart';
 import '../data/subject_catalog.dart';
 
-// ============================================================================
-// MAIN ADMIN DASHBOARD MENU (VERTICAL SERIAL CARDS)
-// ============================================================================
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
 
@@ -31,7 +28,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.5),
         ),
         actions: [
-          // LOGOUT Box Button
+
           InkWell(
             onTap: () => auth.logout(),
             child: Container(
@@ -55,7 +52,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Admin Profile Badge Card
+
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -105,7 +102,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 1. ALL CLASSES
             _buildMenuTile(
               context: context,
               number: '01',
@@ -120,7 +116,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 2. CREATE STUDENT
             _buildMenuTile(
               context: context,
               number: '02',
@@ -135,7 +130,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 3. CREATE TEACHER
             _buildMenuTile(
               context: context,
               number: '03',
@@ -150,7 +144,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 4. CREATE CLASS
             _buildMenuTile(
               context: context,
               number: '04',
@@ -165,7 +158,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 5. PASSWORD OVERRIDE
             _buildMenuTile(
               context: context,
               number: '05',
@@ -254,9 +246,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 }
 
-// ============================================================================
-// PAGE 01: VIEW & MANAGE ALL CLASSES
-// ============================================================================
 class AdminClassesPage extends StatefulWidget {
   const AdminClassesPage({Key? key}) : super(key: key);
 
@@ -406,7 +395,9 @@ class _AdminClassesPageState extends State<AdminClassesPage> {
                                   ),
                                 ),
                               ),
-                              Text('CODE: ${item.code}', style: const TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.bold)),
+                              Flexible(
+                                child: Text('CODE: ${item.code}', textAlign: TextAlign.end, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF888888), fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -456,9 +447,6 @@ class _AdminClassesPageState extends State<AdminClassesPage> {
   }
 }
 
-// ============================================================================
-// PAGE 02: CREATE STUDENT & AUTO-ENROLL
-// ============================================================================
 class AdminCreateStudentPage extends StatefulWidget {
   const AdminCreateStudentPage({Key? key}) : super(key: key);
 
@@ -615,7 +603,6 @@ class _AdminCreateStudentPageState extends State<AdminCreateStudentPage> {
               ),
               const SizedBox(height: 20),
 
-              // Live Calculated Parsing Card
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -631,7 +618,10 @@ class _AdminCreateStudentPageState extends State<AdminCreateStudentPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Academic Session:', style: TextStyle(color: Color(0xFF888888), fontSize: 12)),
-                        Text(_calculatedSession, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(_calculatedSession, textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -639,7 +629,10 @@ class _AdminCreateStudentPageState extends State<AdminCreateStudentPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Department:', style: TextStyle(color: Color(0xFF888888), fontSize: 12)),
-                        Text(_calculatedDept, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(_calculatedDept, textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -647,7 +640,10 @@ class _AdminCreateStudentPageState extends State<AdminCreateStudentPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Auto-Enrollment:', style: TextStyle(color: Color(0xFF888888), fontSize: 12)),
-                        Text('ACTIVE (All running classes)', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11)),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text('ACTIVE (All running classes)', textAlign: TextAlign.end, style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11)),
+                        ),
                       ],
                     ),
                   ],
@@ -678,9 +674,6 @@ class _AdminCreateStudentPageState extends State<AdminCreateStudentPage> {
   }
 }
 
-// ============================================================================
-// PAGE 03: CREATE TEACHER
-// ============================================================================
 class AdminCreateTeacherPage extends StatefulWidget {
   const AdminCreateTeacherPage({Key? key}) : super(key: key);
 
@@ -841,9 +834,6 @@ class _AdminCreateTeacherPageState extends State<AdminCreateTeacherPage> {
   }
 }
 
-// ============================================================================
-// PAGE 04: CREATE CLASS & ASSIGN FACULTY (CROSS-DEPARTMENT TEACHER SELECTION)
-// ============================================================================
 class AdminCreateClassPage extends StatefulWidget {
   const AdminCreateClassPage({Key? key}) : super(key: key);
 
@@ -852,7 +842,7 @@ class AdminCreateClassPage extends StatefulWidget {
 }
 
 class _AdminCreateClassPageState extends State<AdminCreateClassPage> {
-  // Course Config
+
   String _classDept = 'Software Engineering';
   String _classSession = '2023-24';
   String _classSemester = SubjectCatalog.semesters.first;
@@ -860,7 +850,6 @@ class _AdminCreateClassPageState extends State<AdminCreateClassPage> {
   String _classSubjectName = '';
   double _classCredits = 3.0;
 
-  // Teacher Filter & Assignment (Any Department Allowed!)
   String _teacherFilterDept = 'All Departments';
   String? _selectedTeacherId;
   List<Map<String, dynamic>> _availableTeachers = [];
@@ -995,7 +984,6 @@ class _AdminCreateClassPageState extends State<AdminCreateClassPage> {
               const Text('All students in the course department & session will be auto-enrolled. You can assign any faculty member from any department.', style: TextStyle(color: Color(0xFF888888), fontSize: 12)),
               const SizedBox(height: 24),
 
-              // COURSE SECTION
               const Text('1. COURSE DETAILS', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
               const SizedBox(height: 10),
 
@@ -1099,7 +1087,6 @@ class _AdminCreateClassPageState extends State<AdminCreateClassPage> {
               const Divider(color: Color(0xFF2A2A2A), height: 1),
               const SizedBox(height: 20),
 
-              // TEACHER ASSIGNMENT SECTION (WITH DEPARTMENT FILTER)
               const Text('2. ASSIGN FACULTY (ANY DEPARTMENT)', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
               const SizedBox(height: 10),
 
@@ -1185,9 +1172,6 @@ class _AdminCreateClassPageState extends State<AdminCreateClassPage> {
   }
 }
 
-// ============================================================================
-// PAGE 05: PASSWORD OVERRIDE
-// ============================================================================
 class AdminPasswordOverridePage extends StatefulWidget {
   const AdminPasswordOverridePage({Key? key}) : super(key: key);
 

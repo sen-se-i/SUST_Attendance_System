@@ -60,7 +60,6 @@ public class DataSourceConfig {
                 config.setDriverClassName("org.postgresql.Driver");
             }
 
-            // Ensure Supabase / PgBouncer compatibility
             String currentUrl = config.getJdbcUrl();
             if (currentUrl != null && currentUrl.startsWith("jdbc:postgresql:")) {
                 if (!currentUrl.contains("prepareThreshold")) {

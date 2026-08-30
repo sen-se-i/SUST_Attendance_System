@@ -39,11 +39,9 @@ export default function TeacherClassDetailPage() {
   const [selectedRecordIds, setSelectedRecordIds] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ open: false, type: null, data: null });
 
-  // Add Student Modal
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [newStudentRegNo, setNewStudentRegNo] = useState("");
 
-  // Matrix Report Modal
   const [matrixModal, setMatrixModal] = useState({ open: false, data: null, loading: false });
 
   const loadData = useCallback(async () => {
@@ -217,7 +215,6 @@ export default function TeacherClassDetailPage() {
     setSelectedRecordIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   }
 
-  // Open Matrix Report
   async function openMatrixReport() {
     setMatrixModal({ open: true, data: null, loading: true });
     try {
@@ -231,7 +228,7 @@ export default function TeacherClassDetailPage() {
 
   return (
     <div style={{ paddingBottom: 60 }}>
-      {/* Back and Action Bar */}
+      {}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <button type="button" className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.85rem" }} onClick={() => navigate(-1)}>
           <ArrowLeft size={15} /> Back
@@ -276,7 +273,7 @@ export default function TeacherClassDetailPage() {
         </div>
       )}
 
-      {/* GPS Attendance Controls Panel */}
+      {}
       <SessionPanel
         session={activeSession}
         busy={busy}
@@ -285,7 +282,7 @@ export default function TeacherClassDetailPage() {
         onFinished={handleStopSession}
       />
 
-      {/* Session History Section */}
+      {}
       <div className="panel glass-panel" style={{ marginTop: 20, border: "1px solid #213042", padding: 18 }}>
         <h2 style={{ fontSize: "1.15rem", marginBottom: 4 }}>
           <Calendar size={18} color="#00E6FF" style={{ verticalAlign: "middle", marginRight: 6 }} /> Class Session History
@@ -346,7 +343,7 @@ export default function TeacherClassDetailPage() {
         )}
       </div>
 
-      {/* Enrolled Students Section */}
+      {}
       <div className="panel glass-panel" style={{ marginTop: 20, border: "1px solid #213042", padding: 18 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <h2 style={{ fontSize: "1.15rem", margin: 0 }}>
@@ -419,7 +416,7 @@ export default function TeacherClassDetailPage() {
         )}
       </div>
 
-      {/* ADD STUDENT MODAL */}
+      {}
       {showAddStudentModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
           <div className="panel glass-panel" style={{ width: "min(95vw, 420px)", border: "1px solid #00E6FF", padding: 22 }}>
@@ -452,7 +449,7 @@ export default function TeacherClassDetailPage() {
         </div>
       )}
 
-      {/* STUDENT HISTORY MODAL */}
+      {}
       {selectedStudent && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
           <div className="panel glass-panel" style={{ width: "min(95vw, 620px)", maxHeight: "90vh", overflowY: "auto", border: "1px solid #00E6FF", padding: 20 }}>
@@ -571,7 +568,7 @@ export default function TeacherClassDetailPage() {
         </div>
       )}
 
-      {/* MATRIX ATTENDANCE REPORT MODAL */}
+      {}
       {matrixModal.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="panel glass-panel" style={{ width: "min(98vw, 1100px)", maxHeight: "92vh", overflowY: "auto", border: "1px solid #00E6FF", padding: 24 }}>
@@ -622,7 +619,7 @@ export default function TeacherClassDetailPage() {
               <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Generating attendance matrix...</div>
             ) : (
               <div>
-                {/* Summary Metrics */}
+                {}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
                   <div style={{ background: "#090F17", border: "1px solid #213042", padding: "10px 14px", borderRadius: 8 }}>
                     <span style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block" }}>TOTAL SESSIONS</span>
@@ -638,7 +635,7 @@ export default function TeacherClassDetailPage() {
                   </div>
                 </div>
 
-                {/* Matrix Table */}
+                {}
                 <div style={{ overflowX: "auto", border: "1px solid #213042", borderRadius: 10 }}>
                   <table className="table" style={{ width: "100%", fontSize: "0.82rem", textAlign: "center", borderCollapse: "collapse" }}>
                     <thead>
@@ -676,7 +673,7 @@ export default function TeacherClassDetailPage() {
                           </td>
                         </tr>
                       ))}
-                      {/* Summary Row */}
+                      {}
                       <tr style={{ background: "#0D1520", borderTop: "2px solid #213042", fontWeight: 800 }}>
                         <td style={{ padding: "10px 12px", textAlign: "left", color: "#00E6FF", position: "sticky", left: 0, background: "#0D1520" }}>
                           Total Present
@@ -698,7 +695,7 @@ export default function TeacherClassDetailPage() {
         </div>
       )}
 
-      {/* CONFIRMATION DELETION MODAL */}
+      {}
       {confirmModal.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
           <div className="panel glass-panel" style={{ width: "min(90vw, 420px)", border: "2px solid #ef4444", textAlign: "center", padding: 22 }}>
