@@ -44,8 +44,12 @@ public class DataSourceConfig {
                     String host = dbUri.getHost();
                     int port = dbUri.getPort() != -1 ? dbUri.getPort() : 5432;
                     String path = dbUri.getPath();
+                    String query = dbUri.getQuery();
 
                     String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + path;
+                    if (query != null && !query.isBlank()) {
+                        jdbcUrl += "?" + query;
+                    }
                     config.setJdbcUrl(jdbcUrl);
                     if (!username.isBlank()) config.setUsername(username);
                     if (!password.isBlank()) config.setPassword(password);
@@ -64,8 +68,19 @@ public class DataSourceConfig {
             if (currentUrl != null && currentUrl.startsWith("jdbc:postgresql:")) {
                 if (!currentUrl.contains("prepareThreshold")) {
                     currentUrl += (currentUrl.contains("?") ? "&" : "?") + "prepareThreshold=0";
-                    config.setJdbcUrl(currentUrl);
                 }
+                boolean isRemoteCloud = currentUrl.contains("supabase")
+                        || currentUrl.contains("pooler")
+                        || currentUrl.contains("neon")
+                        || currentUrl.contains("amazonaws")
+                        || currentUrl.contains("oregon-postgres")
+                        || currentUrl.contains("frankfurt-postgres");
+
+                if (!currentUrl.contains("sslmode=") && isRemoteCloud) {
+                    currentUrl += (currentUrl.contains("?") ? "&" : "?") + "sslmode=require";
+                }
+                config.setJdbcUrl(currentUrl);
+
                 config.addDataSourceProperty("prepareThreshold", "0");
                 config.addDataSourceProperty("preferQueryMode", "simple");
                 config.addDataSourceProperty("preparedStatementCacheQueries", "0");
