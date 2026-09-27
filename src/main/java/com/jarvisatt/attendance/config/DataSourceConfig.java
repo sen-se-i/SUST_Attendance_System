@@ -6,9 +6,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+import lombok.extern.slf4j.Slf4j;
+
 import javax.sql.DataSource;
 import java.net.URI;
 
+@Slf4j
 @Configuration
 public class DataSourceConfig {
 
@@ -69,15 +72,18 @@ public class DataSourceConfig {
                 if (!currentUrl.contains("prepareThreshold")) {
                     currentUrl += (currentUrl.contains("?") ? "&" : "?") + "prepareThreshold=0";
                 }
-                boolean isRemoteCloud = currentUrl.contains("supabase")
+                boolean isRenderInternal = currentUrl.contains("render.com") || currentUrl.contains("dpg-");
+                boolean isSupabaseOrCloud = currentUrl.contains("supabase")
                         || currentUrl.contains("pooler")
                         || currentUrl.contains("neon")
-                        || currentUrl.contains("amazonaws")
-                        || currentUrl.contains("oregon-postgres")
-                        || currentUrl.contains("frankfurt-postgres");
+                        || currentUrl.contains("amazonaws");
 
-                if (!currentUrl.contains("sslmode=") && isRemoteCloud) {
-                    currentUrl += (currentUrl.contains("?") ? "&" : "?") + "sslmode=require";
+                if (!currentUrl.contains("sslmode=")) {
+                    if (isRenderInternal) {
+                        currentUrl += (currentUrl.contains("?") ? "&" : "?") + "sslmode=disable";
+                    } else if (isSupabaseOrCloud) {
+                        currentUrl += (currentUrl.contains("?") ? "&" : "?") + "sslmode=require";
+                    }
                 }
                 config.setJdbcUrl(currentUrl);
 
@@ -94,6 +100,9 @@ public class DataSourceConfig {
             config.setPassword("");
             config.setDriverClassName("org.h2.Driver");
         }
+
+        log.info("===> [DB CONNECT] JDBC URL: {}", config.getJdbcUrl());
+        log.info("===> [DB CONNECT] DB Username: {}", config.getUsername());
 
         return new HikariDataSource(config);
     }
