@@ -16,7 +16,7 @@ public final class AuthDtos {
     public record UserProfileResponse(UUID userId, String email, Role role, String registrationNo, String department) {}
     public record ResetPasswordRequest(@NotBlank String registrationNo, @NotBlank String newPassword) {}
     public record CreateStudentRequest(@NotBlank String registrationNo, @NotBlank String password) {}
-    public record CreateTeacherRequest(@NotBlank @Email String email, @NotBlank String password, @NotBlank String department) {}
+    public record CreateTeacherRequest(@NotBlank String email, @NotBlank String password, @NotBlank String department) {}
     public record AdminResetPasswordRequest(@NotBlank String identifier, @NotBlank String newPassword) {}
     public record UserSummaryResponse(UUID id, String email, Role role, String registrationNo, String department, String academicSession) {}
 }
